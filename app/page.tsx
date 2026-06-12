@@ -11,7 +11,7 @@ const cursos = [
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-slate-950">
+    <main className="min-h-screen bg-slate-950">    
 
       <section className="flex flex-col items-center justify-center text-center px-6 pt-40 pb-24">
 
