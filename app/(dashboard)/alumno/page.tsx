@@ -1,3 +1,4 @@
+import LogoutButton from '@/components/auth/LogoutButton'
 import Link from 'next/link'
 
 const cursosEnProgreso = [
@@ -61,9 +62,7 @@ export default function AlumnoDashboard() {
             <a className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 font-medium text-sm cursor-pointer transition-colors">
               <span>⚙️</span> Configuracion
             </a>
-            <a className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-800 font-medium text-sm cursor-pointer transition-colors">
-              <span>🚪</span> Cerrar sesion
-            </a>
+            <LogoutButton />
           </div>
         </aside>
 
