@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
   })
@@ -29,7 +29,6 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Si no está logueado y trata de acceder a rutas protegidas
   if (!user && (
     request.nextUrl.pathname.startsWith('/alumno') ||
     request.nextUrl.pathname.startsWith('/docente') ||
@@ -38,7 +37,6 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Si está logueado y trata de ir a login o registro
   if (user && (
     request.nextUrl.pathname.startsWith('/login') ||
     request.nextUrl.pathname.startsWith('/registro')
