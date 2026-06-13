@@ -1,13 +1,12 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import Navbar from '@/components/layout/Navbar'
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'ExactaLab — Ciencias Exactas para LATAM',
-  description: 'Aprende Matemáticas, Física y Cálculo desde la raíz.',
+  description: 'Aprende Matematicas, Fisica y Calculo desde la raiz.',
 }
 
 export default function RootLayout({
@@ -17,8 +16,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body className={`${inter.className} bg-[#0B0F1A] text-white`}>
-        <Navbar />
+      <body className={`${inter.className} bg-slate-950 text-white`}>
         {children}
       </body>
     </html>
