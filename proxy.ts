@@ -29,6 +29,7 @@ export async function proxy(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
+  // Rutas protegidas
   if (!user && (
     request.nextUrl.pathname.startsWith('/alumno') ||
     request.nextUrl.pathname.startsWith('/docente') ||
@@ -37,11 +38,47 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
+  // Si está logueado y va a login/registro → redirigir según rol
   if (user && (
     request.nextUrl.pathname.startsWith('/login') ||
     request.nextUrl.pathname.startsWith('/registro')
   )) {
-    return NextResponse.redirect(new URL('/alumno', request.url))
+    const { data: perfil } = await supabase
+      .from('perfiles')
+      .select('rol')
+      .eq('id', user.id)
+      .single()
+
+    const rol = perfil?.rol || 'alumno'
+
+    if (rol === 'admin') {
+      return NextResponse.redirect(new URL('/admin', request.url))
+    } else if (rol === 'docente') {
+      return NextResponse.redirect(new URL('/docente', request.url))
+    } else {
+      return NextResponse.redirect(new URL('/alumno', request.url))
+    }
+  }
+
+  // Proteger rutas por rol
+  if (user) {
+    const { data: perfil } = await supabase
+      .from('perfiles')
+      .select('rol')
+      .eq('id', user.id)
+      .single()
+
+    const rol = perfil?.rol || 'alumno'
+
+    // Solo admin puede entrar a /admin
+    if (request.nextUrl.pathname.startsWith('/admin') && rol !== 'admin') {
+      return NextResponse.redirect(new URL('/alumno', request.url))
+    }
+
+    // Solo docente o admin puede entrar a /docente
+    if (request.nextUrl.pathname.startsWith('/docente') && rol !== 'docente' && rol !== 'admin') {
+      return NextResponse.redirect(new URL('/alumno', request.url))
+    }
   }
 
   return supabaseResponse

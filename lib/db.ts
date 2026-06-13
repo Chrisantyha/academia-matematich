@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase'
 
+
 // ── CURSOS ──
 export async function getCursos() {
   const supabase = await createServerSupabaseClient()
@@ -46,6 +47,24 @@ export async function getPerfil(userId: string) {
 
   if (error) console.error(error)
   return data
+}
+
+// ── ROL DEL USUARIO ──
+export async function getRolUsuario() {
+  const supabase = await createServerSupabaseClient()
+  
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user) return null
+
+  const { data, error } = await supabase
+    .from('perfiles')
+    .select('rol')
+    .eq('id', user.id)
+    .single()
+
+  if (error) console.error(error)
+  return data?.rol || 'alumno'
 }
 
 export async function actualizarPerfil(userId: string, datos: {
