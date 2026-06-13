@@ -1,5 +1,8 @@
+'use client'
+
 import Link from 'next/link'
 import LogoutButton from '@/components/auth/LogoutButton'
+import VideoUpload from '@/components/curso/VideoUpload'
 
 const misCursos = [
   { icono: '∫', nombre: 'Calculo Diferencial', lecciones: 48, alumnos: 142, estado: 'Publicado', ingresos: '$1,278' },
@@ -12,7 +15,6 @@ export default function DocenteDashboard() {
   return (
     <main className="min-h-screen bg-slate-950 text-white">
 
-      {/* TOP BAR */}
       <div className="border-b border-slate-800 px-8 py-4 flex items-center justify-between">
         <Link href="/" className="text-xl font-bold">
           Exacta<span className="text-yellow-500">Lab</span>
@@ -27,7 +29,6 @@ export default function DocenteDashboard() {
 
       <div className="flex">
 
-        {/* SIDEBAR */}
         <aside className="w-56 min-h-screen border-r border-slate-800 p-4 flex flex-col gap-1">
           <div className="text-xs font-bold uppercase tracking-widest text-slate-600 px-3 py-2 mt-2">Mi contenido</div>
           <a className="flex items-center gap-3 px-3 py-2 rounded-lg bg-yellow-500/10 text-yellow-500 font-medium text-sm border-l-2 border-yellow-500">
@@ -58,15 +59,12 @@ export default function DocenteDashboard() {
           </div>
         </aside>
 
-        {/* CONTENIDO */}
         <div className="flex-1 p-8">
 
-          {/* ALERTA */}
           <div className="bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-sm px-4 py-3 rounded-xl mb-6">
             📣 Tu curso Calculo Diferencial fue aprobado y ya esta publicado.
           </div>
 
-          {/* STATS */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             {[
               { label: 'Estudiantes totales', value: '248', sub: '+12 este mes', color: 'text-yellow-500' },
@@ -82,23 +80,21 @@ export default function DocenteDashboard() {
             ))}
           </div>
 
-          {/* GRAFICO GANANCIAS */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 mb-8">
             <h3 className="text-base font-bold mb-6">Ganancias mensuales (USD)</h3>
             <div className="flex items-end gap-3 h-32">
               {[
-                { mes: 'Ene', valor: 48, alto: 30 },
-                { mes: 'Feb', valor: 72, alto: 45 },
-                { mes: 'Mar', valor: 96, alto: 60 },
-                { mes: 'Abr', valor: 128, alto: 80 },
-                { mes: 'May', valor: 112, alto: 70 },
-                { mes: 'Jun', valor: 186, alto: 100 },
+                { mes: 'Ene', alto: 30 },
+                { mes: 'Feb', alto: 45 },
+                { mes: 'Mar', alto: 60 },
+                { mes: 'Abr', alto: 80 },
+                { mes: 'May', alto: 70 },
+                { mes: 'Jun', alto: 100 },
               ].map((b) => (
                 <div key={b.mes} className="flex-1 flex flex-col items-center gap-2">
                   <div
                     className="w-full bg-yellow-500 rounded-t-lg transition-all hover:bg-yellow-400 cursor-pointer"
                     style={{ height: `${b.alto}%` }}
-                    title={`$${b.valor}`}
                   ></div>
                   <span className="text-xs text-slate-500 font-mono">{b.mes}</span>
                 </div>
@@ -106,7 +102,6 @@ export default function DocenteDashboard() {
             </div>
           </div>
 
-          {/* TABLA CURSOS */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden mb-8">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
               <h3 className="text-base font-bold">Mis cursos</h3>
@@ -151,43 +146,12 @@ export default function DocenteDashboard() {
             </table>
           </div>
 
-          {/* SUBIR VIDEO */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-            <h3 className="text-base font-bold mb-6 pb-4 border-b border-slate-800">Subir nueva leccion</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-2">Curso</label>
-                <select className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 transition-colors">
-                  <option>Ecuaciones Diferenciales</option>
-                  <option>Calculo Diferencial</option>
-                  <option>Algebra Lineal</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-2">Titulo de la leccion</label>
-                <input
-                  type="text"
-                  placeholder="Ej: Metodo de variables separables"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-yellow-500 transition-colors"
-                />
-              </div>
-            </div>
-            <div className="border-2 border-dashed border-slate-700 rounded-2xl p-8 text-center hover:border-yellow-500/50 transition-colors cursor-pointer">
-              <div className="text-4xl mb-3">☁️</div>
-              <div className="text-slate-400 text-sm">
-                Arrastra tu video aqui o <span className="text-yellow-500 font-semibold">haz click para seleccionar</span>
-              </div>
-              <div className="text-slate-600 text-xs mt-2">MP4 · maximo 4GB · Cloudflare Stream</div>
-            </div>
-            <div className="flex gap-3 mt-4">
-              <button className="bg-yellow-500 text-black font-bold px-6 py-2.5 rounded-xl hover:bg-yellow-400 transition-colors text-sm">
-                Subir leccion
-              </button>
-              <button className="border border-slate-700 text-white font-semibold px-6 py-2.5 rounded-xl hover:bg-slate-800 transition-colors text-sm">
-                Guardar borrador
-              </button>
-            </div>
-          </div>
+          <VideoUpload
+            cursoId="f56fcf56-eefd-4b23-b7a3-f5945c675892"
+            onSuccess={(videoId) => {
+              alert('Video subido exitosamente. ID: ' + videoId)
+            }}
+          />
 
         </div>
       </div>
