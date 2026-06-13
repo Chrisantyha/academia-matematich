@@ -6,8 +6,6 @@ interface VideoPlayerProps {
 }
 
 export default function VideoPlayer({ videoId, titulo }: VideoPlayerProps) {
-  const subdomain = process.env.NEXT_PUBLIC_CLOUDFLARE_CUSTOMER_SUBDOMAIN
-
   return (
     <div className="w-full bg-black rounded-2xl overflow-hidden">
       {titulo && (
@@ -17,7 +15,7 @@ export default function VideoPlayer({ videoId, titulo }: VideoPlayerProps) {
       )}
       <div className="relative w-full" style={{ paddingTop: '56.25%' }}>
         <iframe
-          src={`https://${subdomain}.cloudflarestream.com/${videoId}/iframe`}
+          src={`https://iframe.cloudflarestream.com/${videoId}`}
           className="absolute top-0 left-0 w-full h-full"
           allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
           allowFullScreen
