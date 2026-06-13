@@ -1,8 +1,8 @@
-import { createClient } from '@/lib/supabase'
+import { createServerSupabaseClient } from '@/lib/supabase'
 
 // ── CURSOS ──
 export async function getCursos() {
-  const supabase = createClient()
+  const supabase = await createServerSupabaseClient()
   const { data, error } = await supabase
     .from('cursos')
     .select(`
@@ -17,7 +17,7 @@ export async function getCursos() {
 }
 
 export async function getCursoPorId(id: string) {
-  const supabase = createClient()
+  const supabase = await createServerSupabaseClient()
   const { data, error } = await supabase
     .from('cursos')
     .select(`
@@ -28,13 +28,16 @@ export async function getCursoPorId(id: string) {
     .eq('id', id)
     .single()
 
-  if (error) console.error(error)
+  if (error) {
+    console.error('ERROR COMPLETO:', JSON.stringify(error))
+    console.error('ID buscado:', id)
+  }
   return data
 }
 
 // ── PERFIL ──
 export async function getPerfil(userId: string) {
-  const supabase = createClient()
+  const supabase = await createServerSupabaseClient()
   const { data, error } = await supabase
     .from('perfiles')
     .select('*')
@@ -49,7 +52,7 @@ export async function actualizarPerfil(userId: string, datos: {
   nombre?: string
   avatar_url?: string
 }) {
-  const supabase = createClient()
+  const supabase = await createServerSupabaseClient()
   const { error } = await supabase
     .from('perfiles')
     .update(datos)
@@ -60,7 +63,7 @@ export async function actualizarPerfil(userId: string, datos: {
 
 // ── COMPRAS ──
 export async function getComprasAlumno(alumnoId: string) {
-  const supabase = createClient()
+  const supabase = await createServerSupabaseClient()
   const { data, error } = await supabase
     .from('compras')
     .select(`
@@ -74,7 +77,7 @@ export async function getComprasAlumno(alumnoId: string) {
 }
 
 export async function alumnoTieneCurso(alumnoId: string, cursoId: string) {
-  const supabase = createClient()
+  const supabase = await createServerSupabaseClient()
   const { data } = await supabase
     .from('compras')
     .select('id')
@@ -87,7 +90,7 @@ export async function alumnoTieneCurso(alumnoId: string, cursoId: string) {
 
 // ── PROGRESO ──
 export async function getProgreso(alumnoId: string) {
-  const supabase = createClient()
+  const supabase = await createServerSupabaseClient()
   const { data, error } = await supabase
     .from('progreso')
     .select(`
@@ -102,7 +105,7 @@ export async function getProgreso(alumnoId: string) {
 }
 
 export async function marcarLeccionCompletada(alumnoId: string, leccionId: string) {
-  const supabase = createClient()
+  const supabase = await createServerSupabaseClient()
   const { error } = await supabase
     .from('progreso')
     .upsert({
@@ -116,7 +119,7 @@ export async function marcarLeccionCompletada(alumnoId: string, leccionId: strin
 
 // ── LECCIONES ──
 export async function getLeccionesPorCurso(cursoId: string) {
-  const supabase = createClient()
+  const supabase = await createServerSupabaseClient()
   const { data, error } = await supabase
     .from('lecciones')
     .select('*')
