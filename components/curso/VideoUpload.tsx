@@ -4,14 +4,17 @@ import { useState } from 'react'
 
 interface VideoUploadProps {
   cursoId: string
+  moduloId?: string
+  orden?: number
   onSuccess: (videoId: string) => void
 }
 
-export default function VideoUpload({ cursoId, onSuccess }: VideoUploadProps) {
+export default function VideoUpload({ cursoId, moduloId, orden, onSuccess }: VideoUploadProps) {
   const [uploading, setUploading] = useState(false)
   const [progreso, setProgreso] = useState(0)
   const [error, setError] = useState('')
   const [titulo, setTitulo] = useState('')
+  const [esGratis, setEsGratis] = useState(false)
   const [archivo, setArchivo] = useState<File | null>(null)
 
   function handleArchivo(e: React.ChangeEvent<HTMLInputElement>) {
@@ -38,6 +41,9 @@ export default function VideoUpload({ cursoId, onSuccess }: VideoUploadProps) {
       formData.append('video', archivo)
       formData.append('titulo', titulo)
       formData.append('cursoId', cursoId)
+      formData.append('moduloId', moduloId || '')
+      formData.append('orden', String(orden || 1))
+      formData.append('esGratis', String(esGratis))
 
       setProgreso(30)
 
@@ -60,6 +66,7 @@ export default function VideoUpload({ cursoId, onSuccess }: VideoUploadProps) {
       onSuccess(data.videoId)
       setTitulo('')
       setArchivo(null)
+      setProgreso(0)
 
     } catch (err) {
       setError('Error de conexion. Intenta de nuevo.')
@@ -69,10 +76,8 @@ export default function VideoUpload({ cursoId, onSuccess }: VideoUploadProps) {
   }
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-      <h3 className="text-base font-bold mb-6 pb-4 border-b border-slate-800">
-        Subir nueva leccion
-      </h3>
+    <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
+      <h4 className="text-sm font-bold mb-4">Subir nueva leccion</h4>
 
       <div className="mb-4">
         <label className="block text-sm font-semibold text-slate-300 mb-2">
@@ -82,16 +87,25 @@ export default function VideoUpload({ cursoId, onSuccess }: VideoUploadProps) {
           type="text"
           value={titulo}
           onChange={(e) => setTitulo(e.target.value)}
-          placeholder="Ej: Introduccion a las derivadas"
-          className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-yellow-500 transition-colors"
+          placeholder="Ej: Introduccion a los limites"
+          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-yellow-500 transition-colors"
         />
       </div>
 
-      <div className="mb-6">
-        <label className="block text-sm font-semibold text-slate-300 mb-2">
-          Video
+      <div className="mb-4">
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={esGratis}
+            onChange={(e) => setEsGratis(e.target.checked)}
+            className="w-4 h-4 accent-yellow-500"
+          />
+          <span className="text-sm text-slate-300">Esta leccion es gratis (visible sin comprar)</span>
         </label>
-        <label className="block border-2 border-dashed border-slate-700 rounded-2xl p-8 text-center hover:border-yellow-500/50 transition-colors cursor-pointer">
+      </div>
+
+      <div className="mb-5">
+        <label className="block border-2 border-dashed border-slate-600 rounded-xl p-6 text-center hover:border-yellow-500/50 transition-colors cursor-pointer">
           <input
             type="file"
             accept="video/*"
@@ -108,12 +122,12 @@ export default function VideoUpload({ cursoId, onSuccess }: VideoUploadProps) {
             </div>
           ) : (
             <div>
-              <div className="text-4xl mb-3">☁️</div>
+              <div className="text-3xl mb-2">☁️</div>
               <div className="text-slate-400 text-sm">
-                Arrastra tu video aqui o{' '}
+                Arrastra tu video o{' '}
                 <span className="text-yellow-500 font-semibold">haz click para seleccionar</span>
               </div>
-              <div className="text-slate-600 text-xs mt-2">MP4 · maximo 4GB</div>
+              <div className="text-slate-600 text-xs mt-1">MP4 · maximo 4GB</div>
             </div>
           )}
         </label>
@@ -131,7 +145,7 @@ export default function VideoUpload({ cursoId, onSuccess }: VideoUploadProps) {
             <span>Subiendo video...</span>
             <span>{progreso}%</span>
           </div>
-          <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+          <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
             <div
               className="h-full bg-yellow-500 rounded-full transition-all duration-500"
               style={{ width: `${progreso}%` }}
@@ -150,7 +164,7 @@ export default function VideoUpload({ cursoId, onSuccess }: VideoUploadProps) {
         </button>
         <button
           onClick={() => { setArchivo(null); setTitulo('') }}
-          className="border border-slate-700 text-white font-semibold px-6 py-2.5 rounded-xl hover:bg-slate-800 transition-colors text-sm"
+          className="border border-slate-600 text-white font-semibold px-6 py-2.5 rounded-xl hover:bg-slate-700 transition-colors text-sm"
         >
           Cancelar
         </button>
