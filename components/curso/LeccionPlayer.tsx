@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import VideoPlayer from './VideoPlayer'
-import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
 interface Leccion {
@@ -32,10 +31,10 @@ interface LeccionPlayerProps {
 
 export default function LeccionPlayer({ lecciones, modulos, cursoId, progresoInicial }: LeccionPlayerProps) {
   const router = useRouter()
-  const supabase = createClient()
   const [leccionActual, setLeccionActual] = useState(lecciones[0])
   const [completadas, setCompletadas] = useState<string[]>(progresoInicial)
   const [guardando, setGuardando] = useState(false)
+  const [generandoCert, setGenerandoCert] = useState(false)
 
   const porcentaje = Math.round((completadas.length / lecciones.length) * 100)
 
@@ -56,6 +55,27 @@ export default function LeccionPlayer({ lecciones, modulos, cursoId, progresoIni
       console.error(error)
     } finally {
       setGuardando(false)
+    }
+  }
+
+  async function obtenerCertificado() {
+    setGenerandoCert(true)
+    try {
+      const response = await fetch('/api/certificado', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cursoId }),
+      })
+      const data = await response.json()
+      if (data.ok) {
+        window.open(`/certificado/${data.certificadoId}`, '_blank')
+      } else {
+        alert(data.error)
+      }
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setGenerandoCert(false)
     }
   }
 
@@ -114,6 +134,26 @@ export default function LeccionPlayer({ lecciones, modulos, cursoId, progresoIni
             {completadas.length} de {lecciones.length} lecciones completadas
           </div>
         </div>
+
+        {/* BOTON CERTIFICADO */}
+        {porcentaje === 100 && (
+          <div className="mt-4 bg-green-500/10 border border-green-500/30 rounded-xl p-6 text-center">
+            <div className="text-4xl mb-3">🎓</div>
+            <h3 className="text-green-400 font-bold mb-1">
+              ¡Completaste el curso!
+            </h3>
+            <p className="text-slate-400 text-sm mb-4">
+              Genera tu certificado de completacion.
+            </p>
+            <button
+              onClick={obtenerCertificado}
+              disabled={generandoCert}
+              className="bg-green-500 text-black font-bold px-8 py-3 rounded-xl hover:bg-green-400 transition-colors disabled:opacity-50"
+            >
+              {generandoCert ? 'Generando...' : '🎓 Obtener certificado'}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* SIDEBAR */}
@@ -131,7 +171,6 @@ export default function LeccionPlayer({ lecciones, modulos, cursoId, progresoIni
                 return (
                   <div key={modulo.id} className="border-b border-slate-800 last:border-0">
 
-                    {/* HEADER MODULO */}
                     <div className="px-4 py-3 bg-slate-800/50">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-bold text-slate-500">
@@ -144,7 +183,6 @@ export default function LeccionPlayer({ lecciones, modulos, cursoId, progresoIni
                       <div className="text-sm font-semibold mt-0.5">{modulo.titulo}</div>
                     </div>
 
-                    {/* LECCIONES */}
                     {modulo.lecciones && modulo.lecciones
                       .sort((a, b) => a.orden - b.orden)
                       .map((leccion) => (
@@ -184,7 +222,6 @@ export default function LeccionPlayer({ lecciones, modulos, cursoId, progresoIni
                       </div>
                     ))}
 
-                    {/* BOTON EVALUACION */}
                     {tieneEval && (
                       <div className="px-4 py-3 bg-slate-800/30">
                         {estaCompleto ? (
