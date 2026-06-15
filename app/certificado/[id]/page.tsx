@@ -58,7 +58,7 @@ export default async function CertificadoPage({ params }: { params: Promise<{ id
             <div className="text-6xl mb-4">🎓</div>
 
             <div className="text-yellow-500 text-xs font-bold uppercase tracking-widest mb-4">
-              Certificado de Completacion
+              Certificado de Completación
             </div>
 
             <h1 className="text-2xl font-bold mb-2 text-slate-300">
@@ -85,7 +85,7 @@ export default async function CertificadoPage({ params }: { params: Promise<{ id
               <div className="flex items-center justify-between flex-wrap gap-6">
                 <div className="text-left">
                   <div className="text-xs text-slate-500 uppercase tracking-widest mb-1">
-                    Fecha de emision
+                    Fecha de Emisión
                   </div>
                   <div className="text-sm font-semibold">{fecha}</div>
                 </div>
@@ -95,7 +95,7 @@ export default async function CertificadoPage({ params }: { params: Promise<{ id
 
                 <div className="text-right">
                   <div className="text-xs text-slate-500 uppercase tracking-widest mb-1">
-                    Codigo de verificacion
+                    Codigo de verificación
                   </div>
                   <div className="font-mono text-yellow-500 font-bold text-lg">
                     {certificado.codigo_verificacion}
