@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import Navbar from '@/components/layout/Navbar'
 
+
 const cursos = [
   { icono: '∫', tag: 'Calculo I', nombre: 'Calculo Diferencial desde cero', lecciones: 48, precio: '$9' },
   { icono: 'A', tag: 'Algebra Lineal', nombre: 'Matrices y Sistemas de Ecuaciones', lecciones: 42, precio: '$9' },
@@ -29,10 +30,12 @@ export default function Home() {
           <br />tienen sentido
         </h1>
 
-        <p className="text-slate-400 text-xl max-w-xl mb-10 leading-relaxed">
+        <p className="text-slate-400 text-xl max-w-xl mb-6 leading-relaxed">
           Fisica, Algebra, Calculo y mas — explicados desde la raiz.
           No memorizas: <strong className="text-white">entiendes</strong>.
         </p>
+
+        
 
         <div className="flex gap-4 flex-wrap justify-center mb-16">
           <Link href="/cursos" className="bg-yellow-500 text-black font-bold px-8 py-4 rounded-xl hover:bg-yellow-400 transition-all">
