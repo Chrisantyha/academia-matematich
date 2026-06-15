@@ -2,26 +2,32 @@ import Navbar from '@/components/layout/Navbar'
 import LeccionPlayer from '@/components/curso/LeccionPlayer'
 import { getCursoPorId } from '@/lib/db'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import Link from 'next/link'
 
 export default async function CursoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const curso = await getCursoPorId(id)
-
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   let progresoInicial: string[] = []
-
   if (user) {
     const { data } = await supabase
       .from('progreso')
       .select('leccion_id')
       .eq('alumno_id', user.id)
       .eq('completado', true)
-
     progresoInicial = data?.map((p: any) => p.leccion_id) || []
   }
+
+  const { data: modulos } = await supabase
+    .from('modulos')
+    .select(`
+      *,
+      lecciones!lecciones_modulo_id_fkey (*),
+      evaluaciones!evaluaciones_modulo_id_fkey (id, titulo)
+    `)
+    .eq('curso_id', id)
+    .order('orden', { ascending: true })
 
   if (!curso) {
     return (
@@ -34,6 +40,15 @@ export default async function CursoPage({ params }: { params: Promise<{ id: stri
       </main>
     )
   }
+
+  const todasLasLecciones = modulos
+    ? modulos.flatMap((m: any) => m.lecciones || [])
+    : curso.lecciones || []
+
+  const modulosConEval = modulos?.map((m: any) => ({
+    ...m,
+    evaluacion: m.evaluaciones?.[0] || null,
+  })) || []
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
@@ -51,9 +66,10 @@ export default async function CursoPage({ params }: { params: Promise<{ id: stri
           <p className="text-slate-400">{curso.descripcion}</p>
         </div>
 
-        {curso.lecciones && curso.lecciones.length > 0 ? (
+        {todasLasLecciones.length > 0 ? (
           <LeccionPlayer
-            lecciones={curso.lecciones}
+            lecciones={todasLasLecciones}
+            modulos={modulosConEval}
             cursoId={id}
             progresoInicial={progresoInicial}
           />
