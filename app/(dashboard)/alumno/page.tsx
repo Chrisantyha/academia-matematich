@@ -1,6 +1,7 @@
 import LogoutButton from '@/components/auth/LogoutButton'
 import Link from 'next/link'
 
+
 const cursosEnProgreso = [
   { icono: '∫', tag: 'Calculo I', nombre: 'Calculo Diferencial desde cero', progreso: 68, leccionActual: 33, totalLecciones: 48 },
   { icono: 'A', tag: 'Algebra Lineal', nombre: 'Matrices y Sistemas de Ecuaciones', progreso: 35, leccionActual: 15, totalLecciones: 42 },
@@ -42,9 +43,9 @@ export default function AlumnoDashboard() {
           <a className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 font-medium text-sm cursor-pointer transition-colors">
             <span>▶</span> Mis cursos
           </a>
-          <a className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 font-medium text-sm cursor-pointer transition-colors">
+          <Link href="/cursos" className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 font-medium text-sm cursor-pointer transition-colors">
             <span>🔍</span> Explorar
-          </a>
+            </Link>
           <a className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 font-medium text-sm cursor-pointer transition-colors">
             <span>📊</span> Mi progreso
           </a>
