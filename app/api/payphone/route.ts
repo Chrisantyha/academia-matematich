@@ -42,38 +42,53 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Ya tienes este curso' }, { status: 400 })
     }
 
-    // ID único de transacción
-    const clientTransactionId = `${user.id}-${cursoId}-${Date.now()}`
+    // ID único de transacción (máximo 15 caracteres)
+    const timestamp = Date.now().toString().slice(-8)
+    const clientTransactionId = `AM${timestamp}${Math.floor(Math.random() * 9999)}`
+
+    // Guardar la transacción pendiente en Supabase
+    await supabase.from('compras').insert({
+      alumno_id: user.id,
+      curso_id: cursoId,
+      monto: monto,
+      stripe_payment_id: `pending_${clientTransactionId}`,
+    })
+
+    const montoEnCentavos = Math.round(monto * 100)
 
     // Crear link de pago en PayPhone
-    const response = await fetch('https://pay.payphonetodoesposible.com/api/button/Cobrar', {
+    const response = await fetch('https://pay.payphonetodoesposible.com/api/Links', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${PAYPHONE_TOKEN}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        amount: monto * 100, // PayPhone usa centavos
-        amountWithoutTax: monto * 100,
+        amount: montoEnCentavos,
+        amountWithoutTax: montoEnCentavos,
         currency: 'USD',
         clientTransactionId,
         reference: `Curso: ${curso.titulo}`,
         storeId: PAYPHONE_STORE_ID,
-        responseUrl: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/api/payphone/webhook`,
-        cancellationUrl: `${process.env.NEXT_PUBLIC_APP_URL}/cursos/${cursoId}`,
+        oneTime: true,
       }),
     })
 
-    const data = await response.json()
+    // PayPhone devuelve un string con la URL
+    const paymentUrl = await response.text()
+    console.log('PayPhone response:', paymentUrl)
 
-    if (!data.paymentUrl) {
-      console.error('PayPhone error:', data)
+    if (!paymentUrl || paymentUrl.includes('error') || paymentUrl.startsWith('{')) {
+      console.error('PayPhone error:', paymentUrl)
       return NextResponse.json({ error: 'Error al crear link de pago' }, { status: 500 })
     }
 
+    // Limpiar comillas si las tiene
+    const cleanUrl = paymentUrl.replace(/"/g, '')
+
     return NextResponse.json({
       ok: true,
-      paymentUrl: data.paymentUrl,
+      paymentUrl: cleanUrl,
       clientTransactionId,
     })
 

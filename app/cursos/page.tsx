@@ -1,11 +1,29 @@
+'use client'
+
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Navbar from '@/components/layout/Navbar'
-import { getCursos } from '@/lib/db'
 
 const categorias = ['Todos', 'Calculo', 'Algebra', 'Fisica', 'Estadistica', 'EDO']
 
-export default async function CursosPage() {
-  const cursos = await getCursos()
+export default function CursosPage() {
+  const [cursos, setCursos] = useState<any[]>([])
+  const [filtro, setFiltro] = useState('Todos')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function cargarCursos() {
+      const res = await fetch('/api/cursos')
+      const data = await res.json()
+      setCursos(data)
+      setLoading(false)
+    }
+    cargarCursos()
+  }, [])
+
+  const cursosFiltrados = filtro === 'Todos'
+    ? cursos
+    : cursos.filter(c => c.categoria === filtro)
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
@@ -33,8 +51,9 @@ export default async function CursosPage() {
           {categorias.map((cat) => (
             <button
               key={cat}
+              onClick={() => setFiltro(cat)}
               className={`px-4 py-2 rounded-xl text-sm font-semibold border transition-colors ${
-                cat === 'Todos'
+                filtro === cat
                   ? 'bg-yellow-500 text-black border-yellow-500'
                   : 'bg-transparent text-slate-400 border-slate-700 hover:border-slate-500 hover:text-white'
               }`}
@@ -44,16 +63,23 @@ export default async function CursosPage() {
           ))}
         </div>
 
-        {/* CURSOS DESDE DB */}
-        {cursos.length === 0 ? (
+        {/* CURSOS */}
+        {loading ? (
+          <div className="text-center py-24">
+            <div className="text-4xl mb-4">⏳</div>
+            <p className="text-slate-400">Cargando cursos...</p>
+          </div>
+        ) : cursosFiltrados.length === 0 ? (
           <div className="text-center py-24">
             <div className="text-5xl mb-4">📚</div>
-            <h2 className="text-xl font-bold mb-2">Aun no hay cursos publicados</h2>
-            <p className="text-slate-400 text-sm">Los cursos apareceran aqui cuando sean publicados.</p>
+            <h2 className="text-xl font-bold mb-2">
+              {filtro === 'Todos' ? 'Aun no hay cursos publicados' : `No hay cursos de ${filtro}`}
+            </h2>
+            <p className="text-slate-400 text-sm">Los cursos apareceran aqui pronto.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {cursos.map((c: any) => (
+            {cursosFiltrados.map((c: any) => (
               <div
                 key={c.id}
                 className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden cursor-pointer hover:-translate-y-1 hover:border-yellow-500/40 transition-all group"
