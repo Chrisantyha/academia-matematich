@@ -17,13 +17,31 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) {
+
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+
+    if (error || !data.user) {
       setError('Correo o contraseña incorrectos')
       setLoading(false)
       return
     }
-    router.push('/alumno')
+
+    const { data: perfil } = await supabase
+      .from('perfiles')
+      .select('rol')
+      .eq('id', data.user.id)
+      .single()
+
+    const rol = perfil?.rol || 'alumno'
+
+    if (rol === 'admin') {
+      router.push('/admin')
+    } else if (rol === 'docente') {
+      router.push('/docente')
+    } else {
+      router.push('/alumno')
+    }
+    router.refresh()
   }
 
   return (
