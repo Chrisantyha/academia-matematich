@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import TextoMath from '@/components/ui/TextoMath'
 import Link from 'next/link'
@@ -11,7 +11,6 @@ interface Pregunta {
   tipo: string
   pregunta: string
   opciones: string[]
-  respuesta_correcta: string
   tolerancia: number
   orden: number
 }
@@ -26,7 +25,6 @@ interface Evaluacion {
 
 export default function EvaluacionPage() {
   const params = useParams()
-  const router = useRouter()
   const evaluacionId = params.evaluacionId as string
   const supabase = createClient()
 
@@ -35,6 +33,7 @@ export default function EvaluacionPage() {
   const [respuestas, setRespuestas] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [enviando, setEnviando] = useState(false)
+  const [errorEnvio, setErrorEnvio] = useState('')
   const [resultado, setResultado] = useState<{ puntaje: number; aprobado: boolean; correctas: number; total: number } | null>(null)
   const [preguntaActual, setPreguntaActual] = useState(0)
 
@@ -45,13 +44,13 @@ export default function EvaluacionPage() {
   async function cargarEvaluacion() {
     const { data: evalData } = await supabase
       .from('evaluaciones')
-      .select('*')
+      .select('id, titulo, nota_minima, intentos_permitidos, curso_id')
       .eq('id', evaluacionId)
       .single()
 
     const { data: pregData } = await supabase
       .from('preguntas')
-      .select('*')
+      .select('id, tipo, pregunta, opciones, tolerancia, orden')
       .eq('evaluacion_id', evaluacionId)
       .order('orden', { ascending: true })
 
@@ -71,51 +70,44 @@ export default function EvaluacionPage() {
     }
 
     setEnviando(true)
+    setErrorEnvio('')
 
-    // Calificar
-    let correctas = 0
-    for (const p of preguntas) {
-      const respuesta = respuestas[p.id]
-      if (p.tipo === 'numerica') {
-        const respNum = parseFloat(respuesta)
-        const correctaNum = parseFloat(p.respuesta_correcta)
-        if (Math.abs(respNum - correctaNum) <= p.tolerancia) {
-          correctas++
-        }
-      } else {
-        if (respuesta === p.respuesta_correcta) {
-          correctas++
-        }
+    try {
+      const response = await fetch('/api/evaluacion/calificar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ evaluacionId, respuestas }),
+      })
+
+      const data = await response.json()
+
+      if (!data.ok) {
+        setErrorEnvio(data.error || 'No se pudo calificar la evaluación.')
+        setEnviando(false)
+        return
       }
+
+      setResultado({
+        puntaje: data.puntaje,
+        aprobado: data.aprobado,
+        correctas: data.correctas,
+        total: data.total,
+      })
+    } catch (err) {
+      setErrorEnvio('Error de conexión. Intenta de nuevo.')
+    } finally {
+      setEnviando(false)
     }
-
-    const puntaje = Math.round((correctas / preguntas.length) * 100)
-    const aprobado = puntaje >= (evaluacion?.nota_minima || 70)
-
-    // Guardar resultado
-    const { data: { user } } = await supabase.auth.getUser()
-
-    await supabase.from('resultados_evaluacion').insert({
-      alumno_id: user?.id,
-      evaluacion_id: evaluacionId,
-      respuestas: respuestas,
-      puntaje,
-      aprobado,
-    })
-
-    setResultado({ puntaje, aprobado, correctas, total: preguntas.length })
-    setEnviando(false)
   }
 
   if (loading) {
     return (
       <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
-        <div className="text-slate-400">Cargando evaluacion...</div>
+        <div className="text-slate-400">Cargando evaluación...</div>
       </main>
     )
   }
 
-  // RESULTADO
   if (resultado) {
     return (
       <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center px-4">
@@ -128,7 +120,7 @@ export default function EvaluacionPage() {
           </h1>
           <p className="text-slate-400 mb-8">
             {resultado.aprobado
-              ? 'Excelente trabajo. Puedes continuar al siguiente modulo.'
+              ? 'Excelente trabajo. Puedes continuar al siguiente módulo.'
               : `Necesitas ${evaluacion?.nota_minima}% para aprobar. Intenta de nuevo.`}
           </p>
 
@@ -148,7 +140,7 @@ export default function EvaluacionPage() {
             </div>
 
             <div className="mt-4 text-xs text-slate-500">
-              Nota minima: {evaluacion?.nota_minima}%
+              Nota mínima: {evaluacion?.nota_minima}%
             </div>
           </div>
 
@@ -180,10 +172,17 @@ export default function EvaluacionPage() {
 
   const pregunta = preguntas[preguntaActual]
 
+  if (!pregunta) {
+    return (
+      <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center px-4">
+        <p className="text-slate-400">Esta evaluación no tiene preguntas todavía.</p>
+      </main>
+    )
+  }
+
   return (
     <main className="min-h-screen bg-slate-950 text-white">
 
-      {/* HEADER */}
       <div className="border-b border-slate-800 px-8 py-4 flex items-center justify-between">
         <Link href="/" className="text-xl font-bold">
           Exacta<span className="text-yellow-500">Lab</span>
@@ -193,7 +192,6 @@ export default function EvaluacionPage() {
 
       <div className="max-w-2xl mx-auto px-8 py-12">
 
-        {/* PROGRESO */}
         <div className="mb-8">
           <div className="flex justify-between text-sm text-slate-400 mb-2">
             <span>Pregunta {preguntaActual + 1} de {preguntas.length}</span>
@@ -207,19 +205,17 @@ export default function EvaluacionPage() {
           </div>
         </div>
 
-        {/* PREGUNTA */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 mb-6">
           <div className="text-yellow-500 text-xs font-bold uppercase tracking-widest mb-4">
-            {pregunta.tipo === 'opcion_multiple' && 'Opcion multiple'}
+            {pregunta.tipo === 'opcion_multiple' && 'Opción múltiple'}
             {pregunta.tipo === 'verdadero_falso' && 'Verdadero o Falso'}
-            {pregunta.tipo === 'numerica' && 'Respuesta numerica'}
+            {pregunta.tipo === 'numerica' && 'Respuesta numérica'}
           </div>
 
           <div className="text-lg font-semibold mb-6 leading-relaxed">
             <TextoMath texto={pregunta.pregunta} />
           </div>
 
-          {/* OPCIONES MULTIPLE */}
           {pregunta.tipo === 'opcion_multiple' && (
             <div className="space-y-3">
               {pregunta.opciones.map((opcion, index) => {
@@ -247,7 +243,6 @@ export default function EvaluacionPage() {
             </div>
           )}
 
-          {/* VERDADERO FALSO */}
           {pregunta.tipo === 'verdadero_falso' && (
             <div className="grid grid-cols-2 gap-4">
               {['Verdadero', 'Falso'].map((opcion) => {
@@ -269,14 +264,13 @@ export default function EvaluacionPage() {
             </div>
           )}
 
-          {/* NUMERICA */}
           {pregunta.tipo === 'numerica' && (
             <div>
               <input
                 type="number"
                 value={respuestas[pregunta.id] || ''}
                 onChange={(e) => responder(pregunta.id, e.target.value)}
-                placeholder="Escribe tu respuesta numerica"
+                placeholder="Escribe tu respuesta numérica"
                 className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-yellow-500 transition-colors text-lg"
                 step="any"
               />
@@ -289,7 +283,12 @@ export default function EvaluacionPage() {
           )}
         </div>
 
-        {/* NAVEGACION */}
+        {errorEnvio && (
+          <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm px-4 py-3 rounded-xl mb-6">
+            {errorEnvio}
+          </div>
+        )}
+
         <div className="flex items-center justify-between">
           <button
             onClick={() => setPreguntaActual(Math.max(0, preguntaActual - 1))}
@@ -330,7 +329,7 @@ export default function EvaluacionPage() {
               disabled={enviando}
               className="bg-green-500 text-black font-bold px-6 py-3 rounded-xl hover:bg-green-400 transition-colors disabled:opacity-50"
             >
-              {enviando ? 'Enviando...' : 'Enviar evaluacion'}
+              {enviando ? 'Enviando...' : 'Enviar evaluación'}
             </button>
           )}
         </div>
