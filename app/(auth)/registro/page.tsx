@@ -1,93 +1,122 @@
-import { NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/supabase-server'
+'use client'
 
-const PAYPHONE_TOKEN = process.env.PAYPHONE_TOKEN
+import { useState } from 'react'
+import Link from 'next/link'
+import { createClient } from '@/lib/supabase'
+import { useRouter } from 'next/navigation'
 
-export async function POST(request: Request) {
-  try {
-    const body = await request.json()
-    console.log('PayPhone webhook recibido:', body)
+export default function RegistroPage() {
+  const [nombre, setNombre] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const router = useRouter()
+  const supabase = createClient()
 
-    const { clientTransactionId, transactionStatus, id } = body
+  async function handleRegistro() {
+    setLoading(true)
+    setError('')
 
-    const supabase = await createServerSupabaseClient()
-
-    // Verificar que el pago fue aprobado
-    if (transactionStatus !== 'Approved') {
-      await supabase
-        .from('compras')
-        .update({ estado: 'rechazado' })
-        .eq('payphone_transaction_id', clientTransactionId)
-
-      return NextResponse.json({ ok: false, message: 'Pago no aprobado' })
+    if (password.length < 6) {
+      setError('La contraseña debe tener al menos 6 caracteres')
+      setLoading(false)
+      return
     }
 
-    // Verificar transacción con PayPhone (para evitar webhooks falsos)
-    const verifyResponse = await fetch(
-      `https://pay.payphonetodoesposible.com/api/button/V2/Confirm`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${PAYPHONE_TOKEN}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          id,
-          clientTransactionId,
-        }),
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { nombre },
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/login`,
       }
-    )
-
-    const verifyData = await verifyResponse.json()
-    console.log('PayPhone verificacion:', verifyData)
-
-    if (verifyData.transactionStatus !== 'Approved') {
-      await supabase
-        .from('compras')
-        .update({ estado: 'rechazado' })
-        .eq('payphone_transaction_id', clientTransactionId)
-
-      return NextResponse.json({ ok: false, message: 'Verificacion fallida' })
-    }
-
-    // Buscar la compra pendiente por el ID de transacción que YA guardamos
-    // al crear el link de pago (en vez de intentar parsear alumnoId/cursoId
-    // desde el clientTransactionId, que nunca los contuvo)
-    const { data: compra, error: buscarError } = await supabase
-      .from('compras')
-      .select('id, estado')
-      .eq('payphone_transaction_id', clientTransactionId)
-      .maybeSingle()
-
-    if (buscarError || !compra) {
-      console.error('No se encontró la compra para clientTransactionId:', clientTransactionId)
-      return NextResponse.json({ ok: false, message: 'Compra no encontrada' }, { status: 404 })
-    }
-
-    if (compra.estado === 'aprobado') {
-      return NextResponse.json({ ok: true, message: 'Compra ya registrada' })
-    }
-
-    const monto = verifyData.amount / 100
-
-    const { error } = await supabase
-      .from('compras')
-      .update({
-        estado: 'aprobado',
-        monto,
-      })
-      .eq('id', compra.id)
+    })
 
     if (error) {
-      console.error('Error al registrar compra:', error)
-      return NextResponse.json({ ok: false, message: 'Error al registrar compra' }, { status: 500 })
+      setError('Error al crear la cuenta. Intenta de nuevo.')
+      setLoading(false)
+      return
     }
 
-    console.log('Compra registrada exitosamente')
-    return NextResponse.json({ ok: true, message: 'Compra registrada' })
-
-  } catch (error) {
-    console.error('Webhook error:', error)
-    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+    router.push('/login')
   }
+
+  return (
+    <main className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
+      <div className="w-full max-w-md">
+
+        <div className="text-center mb-8">
+          <Link href="/" className="text-2xl font-bold text-white">
+            Exacta<span className="text-yellow-500">Lab</span>
+          </Link>
+          <p className="text-slate-400 mt-2">Crea tu cuenta gratis</p>
+        </div>
+
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8">
+
+          <div className="mb-5">
+            <label className="block text-sm font-semibold text-slate-300 mb-2">
+              Nombre completo
+            </label>
+            <input
+              type="text"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              placeholder="Tu nombre"
+              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-yellow-500 transition-colors"
+            />
+          </div>
+
+          <div className="mb-5">
+            <label className="block text-sm font-semibold text-slate-300 mb-2">
+              Correo electrónico
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="tu@correo.com"
+              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-yellow-500 transition-colors"
+            />
+          </div>
+
+          <div className="mb-6">
+            <label className="block text-sm font-semibold text-slate-300 mb-2">
+              Contraseña
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Mínimo 6 caracteres"
+              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-yellow-500 transition-colors"
+            />
+          </div>
+
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm px-4 py-3 rounded-xl mb-5">
+              {error}
+            </div>
+          )}
+
+          <button
+            onClick={handleRegistro}
+            disabled={loading}
+            className="w-full bg-yellow-500 text-black font-bold py-3 rounded-xl hover:bg-yellow-400 transition-colors disabled:opacity-50"
+          >
+            {loading ? 'Creando cuenta...' : 'Crear cuenta gratis'}
+          </button>
+
+          <p className="text-center text-slate-500 text-sm mt-6">
+            ¿Ya tienes cuenta?{' '}
+            <Link href="/login" className="text-yellow-500 font-semibold hover:text-yellow-400">
+              Inicia sesión
+            </Link>
+          </p>
+
+        </div>
+      </div>
+    </main>
+  )
 }
