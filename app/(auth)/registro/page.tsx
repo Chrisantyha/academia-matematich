@@ -14,7 +14,8 @@ export default function RegistroPage() {
   const router = useRouter()
   const supabase = createClient()
 
-  async function handleRegistro() {
+  async function handleRegistro(e: React.FormEvent) {
+    e.preventDefault()
     setLoading(true)
     setError('')
 
@@ -53,7 +54,7 @@ export default function RegistroPage() {
           <p className="text-slate-400 mt-2">Crea tu cuenta gratis</p>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8">
+        <form onSubmit={handleRegistro} className="bg-slate-900 border border-slate-800 rounded-2xl p-8">
 
           <div className="mb-5">
             <label className="block text-sm font-semibold text-slate-300 mb-2">
@@ -64,6 +65,8 @@ export default function RegistroPage() {
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
               placeholder="Tu nombre"
+              autoComplete="name"
+              required
               className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-yellow-500 transition-colors"
             />
           </div>
@@ -77,6 +80,8 @@ export default function RegistroPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="tu@correo.com"
+              autoComplete="email"
+              required
               className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-yellow-500 transition-colors"
             />
           </div>
@@ -90,6 +95,9 @@ export default function RegistroPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Mínimo 6 caracteres"
+              autoComplete="new-password"
+              required
+              minLength={6}
               className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-yellow-500 transition-colors"
             />
           </div>
@@ -101,7 +109,7 @@ export default function RegistroPage() {
           )}
 
           <button
-            onClick={handleRegistro}
+            type="submit"
             disabled={loading}
             className="w-full bg-yellow-500 text-black font-bold py-3 rounded-xl hover:bg-yellow-400 transition-colors disabled:opacity-50"
           >
@@ -115,7 +123,7 @@ export default function RegistroPage() {
             </Link>
           </p>
 
-        </div>
+        </form>
       </div>
     </main>
   )
