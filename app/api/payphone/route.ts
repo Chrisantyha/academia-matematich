@@ -30,29 +30,52 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Curso no encontrado' }, { status: 404 })
     }
 
-    // Verificar que no tenga el curso ya
-    const { data: compraExistente } = await supabase
+    // Verificar que no tenga el curso YA APROBADO
+    const { data: compraAprobada } = await supabase
       .from('compras')
       .select('id')
       .eq('alumno_id', user.id)
       .eq('curso_id', cursoId)
-      .single()
+      .eq('estado', 'aprobado')
+      .maybeSingle()
 
-    if (compraExistente) {
+    if (compraAprobada) {
       return NextResponse.json({ error: 'Ya tienes este curso' }, { status: 400 })
     }
 
-    // ID único de transacción (máximo 15 caracteres)
+    // Si hay una compra pendiente anterior de este mismo alumno/curso,
+    // la reutilizamos (evita filas duplicadas por reintentos)
+    const { data: compraPendiente } = await supabase
+      .from('compras')
+      .select('id')
+      .eq('alumno_id', user.id)
+      .eq('curso_id', cursoId)
+      .eq('estado', 'pendiente')
+      .maybeSingle()
+
+    // ID único de transacción (máximo 15 caracteres, sin guiones)
     const timestamp = Date.now().toString().slice(-8)
     const clientTransactionId = `AM${timestamp}${Math.floor(Math.random() * 9999)}`
 
-    // Guardar la transacción pendiente en Supabase
-    await supabase.from('compras').insert({
-      alumno_id: user.id,
-      curso_id: cursoId,
-      monto: monto,
-      stripe_payment_id: `pending_${clientTransactionId}`,
-    })
+    if (compraPendiente) {
+      // Actualizamos la fila pendiente existente con el nuevo intento de pago
+      await supabase
+        .from('compras')
+        .update({
+          monto,
+          payphone_transaction_id: clientTransactionId,
+        })
+        .eq('id', compraPendiente.id)
+    } else {
+      // Creamos la fila pendiente por primera vez
+      await supabase.from('compras').insert({
+        alumno_id: user.id,
+        curso_id: cursoId,
+        monto: monto,
+        estado: 'pendiente',
+        payphone_transaction_id: clientTransactionId,
+      })
+    }
 
     const montoEnCentavos = Math.round(monto * 100)
 
@@ -80,6 +103,14 @@ export async function POST(request: Request) {
 
     if (!paymentUrl || paymentUrl.includes('error') || paymentUrl.startsWith('{')) {
       console.error('PayPhone error:', paymentUrl)
+      // No dejamos una fila pendiente "huérfana" apuntando a un link que nunca se creó
+      await supabase
+        .from('compras')
+        .update({ estado: 'rechazado' })
+        .eq('alumno_id', user.id)
+        .eq('curso_id', cursoId)
+        .eq('payphone_transaction_id', clientTransactionId)
+
       return NextResponse.json({ error: 'Error al crear link de pago' }, { status: 500 })
     }
 

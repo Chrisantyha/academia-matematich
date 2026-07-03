@@ -90,6 +90,7 @@ export async function getComprasAlumno(alumnoId: string) {
       cursos (titulo, imagen_url)
     `)
     .eq('alumno_id', alumnoId)
+    .eq('estado', 'aprobado')
 
   if (error) console.error(error)
   return data || []
@@ -102,7 +103,8 @@ export async function alumnoTieneCurso(alumnoId: string, cursoId: string) {
     .select('id')
     .eq('alumno_id', alumnoId)
     .eq('curso_id', cursoId)
-    .single()
+    .eq('estado', 'aprobado')
+    .maybeSingle()
 
   return !!data
 }

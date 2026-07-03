@@ -21,13 +21,14 @@ export default async function CursoPage({ params }: { params: Promise<{ id: stri
       .eq('completado', true)
     progresoInicial = data?.map((p: any) => p.leccion_id) || []
 
-    // Verificar si ya compró el curso
+    // Verificar si ya compró el curso (solo cuenta si el pago fue aprobado)
     const { data: compra } = await supabase
       .from('compras')
       .select('id')
       .eq('alumno_id', user.id)
       .eq('curso_id', id)
-      .single()
+      .eq('estado', 'aprobado')
+      .maybeSingle()
 
     tieneElCurso = !!compra
   }

@@ -10,12 +10,19 @@ export async function POST(request: Request) {
 
     const { clientTransactionId, transactionStatus, id } = body
 
+    const supabase = await createServerSupabaseClient()
+
     // Verificar que el pago fue aprobado
     if (transactionStatus !== 'Approved') {
+      await supabase
+        .from('compras')
+        .update({ estado: 'rechazado' })
+        .eq('payphone_transaction_id', clientTransactionId)
+
       return NextResponse.json({ ok: false, message: 'Pago no aprobado' })
     }
 
-    // Verificar transaccion con PayPhone
+    // Verificar transacción con PayPhone (para evitar webhooks falsos)
     const verifyResponse = await fetch(
       `https://pay.payphonetodoesposible.com/api/button/V2/Confirm`,
       {
@@ -35,40 +42,41 @@ export async function POST(request: Request) {
     console.log('PayPhone verificacion:', verifyData)
 
     if (verifyData.transactionStatus !== 'Approved') {
+      await supabase
+        .from('compras')
+        .update({ estado: 'rechazado' })
+        .eq('payphone_transaction_id', clientTransactionId)
+
       return NextResponse.json({ ok: false, message: 'Verificacion fallida' })
     }
 
-    // Extraer alumnoId y cursoId del clientTransactionId
-    // formato: alumnoId-cursoId-timestamp
-    const partes = clientTransactionId.split('-')
-    // UUID tiene 5 partes separadas por guion
-    const alumnoId = partes.slice(0, 5).join('-')
-    const cursoId = partes.slice(5, 10).join('-')
-    const monto = verifyData.amount / 100
-
-    const supabase = await createServerSupabaseClient()
-
-    // Verificar que no exista la compra
-    const { data: compraExistente } = await supabase
+    // Buscar la compra pendiente por el ID de transacción que YA guardamos
+    // al crear el link de pago (en vez de intentar parsear alumnoId/cursoId
+    // desde el clientTransactionId, que nunca los contuvo)
+    const { data: compra, error: buscarError } = await supabase
       .from('compras')
-      .select('id')
-      .eq('alumno_id', alumnoId)
-      .eq('curso_id', cursoId)
-      .single()
+      .select('id, estado')
+      .eq('payphone_transaction_id', clientTransactionId)
+      .maybeSingle()
 
-    if (compraExistente) {
+    if (buscarError || !compra) {
+      console.error('No se encontró la compra para clientTransactionId:', clientTransactionId)
+      return NextResponse.json({ ok: false, message: 'Compra no encontrada' }, { status: 404 })
+    }
+
+    if (compra.estado === 'aprobado') {
       return NextResponse.json({ ok: true, message: 'Compra ya registrada' })
     }
 
-    // Registrar compra en Supabase
+    const monto = verifyData.amount / 100
+
     const { error } = await supabase
       .from('compras')
-      .insert({
-        alumno_id: alumnoId,
-        curso_id: cursoId,
+      .update({
+        estado: 'aprobado',
         monto,
-        stripe_payment_id: String(id),
       })
+      .eq('id', compra.id)
 
     if (error) {
       console.error('Error al registrar compra:', error)
