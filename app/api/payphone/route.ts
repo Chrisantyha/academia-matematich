@@ -4,6 +4,7 @@ import https from 'https'
 
 const PAYPHONE_TOKEN = process.env.PAYPHONE_TOKEN
 const PAYPHONE_STORE_ID = process.env.PAYPHONE_STORE_ID
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL_LOCAL
 
 function payphoneRequest(body: any): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -59,9 +60,10 @@ export async function POST(request: Request) {
 
     const { data: compraExistente } = await supabase
       .from('compras')
-      .select('id')
+      .select('id, estado')
       .eq('alumno_id', user.id)
       .eq('curso_id', cursoId)
+      .eq('estado', 'aprobado')
       .single()
 
     if (compraExistente) {
@@ -82,6 +84,8 @@ export async function POST(request: Request) {
       currency: 'USD',
       storeId: PAYPHONE_STORE_ID,
       reference: `Curso ${cursoId.slice(0, 8)}`,
+      responseUrl: `${APP_URL}/pago/confirmacion`,
+      cancellationUrl: `${APP_URL}/cursos/${cursoId}`,
       oneTime: true,
       expireIn: null,
       isAmountEditable: false,
@@ -98,11 +102,21 @@ export async function POST(request: Request) {
 
     const cleanUrl = paymentUrl.replace(/"/g, '')
 
+    // Borrar compras pendientes anteriores de este curso
+    await supabase
+      .from('compras')
+      .delete()
+      .eq('alumno_id', user.id)
+      .eq('curso_id', cursoId)
+      .eq('estado', 'pendiente')
+
+    // Guardar nueva compra pendiente
     await supabase.from('compras').insert({
       alumno_id: user.id,
       curso_id: cursoId,
       monto: monto,
-      stripe_payment_id: `pending_${clientTransactionId}`,
+      estado: 'pendiente',
+      payphone_transaction_id: clientTransactionId,
     })
 
     return NextResponse.json({
