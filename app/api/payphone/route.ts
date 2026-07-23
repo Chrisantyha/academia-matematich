@@ -42,9 +42,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
-    const { cursoId, monto } = await request.json()
+    const { cursoId } = await request.json()
 
-    if (!cursoId || !monto) {
+    if (!cursoId) {
       return NextResponse.json({ error: 'Faltan datos' }, { status: 400 })
     }
 
@@ -56,6 +56,13 @@ export async function POST(request: Request) {
 
     if (!curso) {
       return NextResponse.json({ error: 'Curso no encontrado' }, { status: 404 })
+    }
+
+    // El monto a cobrar SIEMPRE se calcula desde el precio real en la base de
+    // datos. Nunca se confía en un "monto" enviado por el cliente.
+    const precio = Number(curso.precio)
+    if (!Number.isFinite(precio) || precio <= 0) {
+      return NextResponse.json({ error: 'El curso no tiene un precio válido' }, { status: 400 })
     }
 
     const { data: compraExistente } = await supabase
@@ -71,7 +78,7 @@ export async function POST(request: Request) {
     }
 
     const clientTransactionId = `AM${Math.floor(Date.now() / 1000)}`
-    const montoEnCentavos = Math.round(monto * 100)
+    const montoEnCentavos = Math.round(precio * 100)
 
     const body = {
       amount: montoEnCentavos,
@@ -114,7 +121,7 @@ export async function POST(request: Request) {
     await supabase.from('compras').insert({
       alumno_id: user.id,
       curso_id: cursoId,
-      monto: monto,
+      monto: precio,
       estado: 'pendiente',
       payphone_transaction_id: clientTransactionId,
     })
