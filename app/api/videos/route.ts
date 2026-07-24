@@ -1,7 +1,27 @@
 import { NextResponse } from 'next/server'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
 
 export async function POST(request: Request) {
   try {
+    const supabase = await createServerSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
+
+    const { data: perfil } = await supabase
+      .from('perfiles')
+      .select('rol')
+      .eq('id', user.id)
+      .single()
+
+    const rol = perfil?.rol || 'alumno'
+
+    if (rol !== 'docente' && rol !== 'admin') {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+    }
+
     const formData = await request.formData()
     const video = formData.get('video') as File
     const titulo = formData.get('titulo') as string
