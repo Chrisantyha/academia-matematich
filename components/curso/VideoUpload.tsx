@@ -22,6 +22,34 @@ export default function VideoUpload({ cursoId, moduloId, orden, onSuccess }: Vid
     if (file) setArchivo(file)
   }
 
+  function subirACloudflare(uploadURL: string, video: File): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const formData = new FormData()
+      formData.append('file', video)
+
+      const xhr = new XMLHttpRequest()
+      xhr.open('POST', uploadURL)
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          // 0-10% pedir la URL, 10-90% subida real, 90-100% guardar en la BD
+          setProgreso(10 + Math.round((e.loaded / e.total) * 80))
+        }
+      }
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve()
+        } else {
+          reject(new Error(`Cloudflare respondio ${xhr.status}`))
+        }
+      }
+      xhr.onerror = () => reject(new Error('Error de red subiendo a Cloudflare'))
+
+      xhr.send(formData)
+    })
+  }
+
   async function handleUpload() {
     if (!archivo) {
       setError('Selecciona un video primero')
@@ -34,36 +62,57 @@ export default function VideoUpload({ cursoId, moduloId, orden, onSuccess }: Vid
 
     setUploading(true)
     setError('')
-    setProgreso(10)
+    setProgreso(5)
 
     try {
-      const formData = new FormData()
-      formData.append('video', archivo)
-      formData.append('titulo', titulo)
-      formData.append('cursoId', cursoId)
-      formData.append('moduloId', moduloId || '')
-      formData.append('orden', String(orden || 1))
-      formData.append('esGratis', String(esGratis))
-
-      setProgreso(30)
-
-      const response = await fetch('/api/upload-video', {
+      // Paso 1: pedir a nuestro backend una URL de subida directa a Cloudflare Stream
+      const creacion = await fetch('/api/upload-video', {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ titulo }),
       })
 
-      setProgreso(80)
+      const datosCreacion = await creacion.json()
 
-      const data = await response.json()
+      if (!datosCreacion.ok) {
+        setError('Error al iniciar la subida. Intenta de nuevo.')
+        setUploading(false)
+        return
+      }
 
-      if (!data.ok) {
-        setError('Error al subir el video. Intenta de nuevo.')
+      setProgreso(10)
+
+      // Paso 2: subir el archivo directo a Cloudflare desde el navegador
+      // (ya no pasa por nuestro backend, evita el limite de tamano de Vercel)
+      await subirACloudflare(datosCreacion.uploadURL, archivo)
+
+      setProgreso(90)
+
+      // Paso 3: guardar la leccion en nuestra base de datos
+      const guardado = await fetch('/api/upload-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'guardar',
+          videoId: datosCreacion.videoId,
+          titulo,
+          cursoId,
+          moduloId: moduloId || '',
+          orden: orden || 1,
+          esGratis,
+        }),
+      })
+
+      const datosGuardado = await guardado.json()
+
+      if (!datosGuardado.ok) {
+        setError('El video se subio pero no se pudo guardar la leccion. Contacta soporte.')
         setUploading(false)
         return
       }
 
       setProgreso(100)
-      onSuccess(data.videoId)
+      onSuccess(datosGuardado.videoId)
       setTitulo('')
       setArchivo(null)
       setProgreso(0)
