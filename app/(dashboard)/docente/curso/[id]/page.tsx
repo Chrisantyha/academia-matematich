@@ -33,33 +33,39 @@ export default function GestionarCursoPage() {
   const [nuevoModulo, setNuevoModulo] = useState('')
   const [agregandoModulo, setAgregandoModulo] = useState(false)
   const [moduloActivo, setModuloActivo] = useState<string | null>(null)
+  const [borrandoId, setBorrandoId] = useState<string | null>(null)
 
   useEffect(() => {
-    cargarDatos()
+    cargarDatos(true)
   }, [])
 
-  async function cargarDatos() {
-    setLoading(true)
+  async function cargarDatos(esCargaInicial = false) {
+    if (esCargaInicial) setLoading(true)
 
-    const { data: cursoData } = await supabase
-      .from('cursos')
-      .select('*')
-      .eq('id', cursoId)
-      .single()
+    try {
+      const { data: cursoData } = await supabase
+        .from('cursos')
+        .select('*')
+        .eq('id', cursoId)
+        .single()
 
-    setCurso(cursoData)
+      setCurso(cursoData)
 
-    const { data: modulosData } = await supabase
-  .from('modulos')
-  .select(`
-    *,
-    lecciones!lecciones_modulo_id_fkey (*)
-  `)
-  .eq('curso_id', cursoId)
-  .order('orden', { ascending: true })
+      const { data: modulosData } = await supabase
+        .from('modulos')
+        .select(`
+          *,
+          lecciones!lecciones_modulo_id_fkey (*)
+        `)
+        .eq('curso_id', cursoId)
+        .order('orden', { ascending: true })
 
-    setModulos(modulosData || [])
-    setLoading(false)
+      setModulos(modulosData || [])
+    } catch (err) {
+      console.error('Error al cargar datos del curso:', err)
+    } finally {
+      if (esCargaInicial) setLoading(false)
+    }
   }
 
   async function agregarModulo() {
@@ -81,6 +87,65 @@ export default function GestionarCursoPage() {
       setNuevoModulo('')
     }
     setAgregandoModulo(false)
+  }
+
+  async function borrarLeccion(leccion: Leccion) {
+    const confirmado = window.confirm(
+      `¿Eliminar la lección "${leccion.titulo}"? Esto también eliminará su video. Esta acción no se puede deshacer.`
+    )
+    if (!confirmado) return
+
+    setBorrandoId(leccion.id)
+    try {
+      const response = await fetch(`/api/lecciones/${leccion.id}`, { method: 'DELETE' })
+      const data = await response.json()
+
+      if (!data.ok) {
+        alert(data.error || 'Error al eliminar la leccion')
+        return
+      }
+
+      cargarDatos()
+    } catch (err) {
+      alert('Error de conexion al eliminar la leccion')
+    } finally {
+      setBorrandoId(null)
+    }
+  }
+
+  async function borrarModulo(modulo: Modulo, e: React.MouseEvent) {
+    e.stopPropagation()
+
+    const totalLecciones = modulo.lecciones?.length || 0
+    const mensaje = totalLecciones > 0
+      ? `¿Eliminar el módulo "${modulo.titulo}"? Esto eliminará ${totalLecciones} ${totalLecciones === 1 ? 'lección' : 'lecciones'} y sus videos. Esta acción no se puede deshacer.`
+      : `¿Eliminar el módulo "${modulo.titulo}"? Esta acción no se puede deshacer.`
+
+    const confirmado = window.confirm(mensaje)
+    if (!confirmado) return
+
+    setBorrandoId(modulo.id)
+    try {
+      const response = await fetch(`/api/modulos/${modulo.id}`, { method: 'DELETE' })
+      const data = await response.json()
+
+      if (!data.ok) {
+        // TODO(debug): quitar "data.detalle" antes de lanzar a produccion.
+        alert(
+          data.detalle
+            ? `${data.error}\n\n${JSON.stringify(data.detalle, null, 2)}`
+            : (data.error || 'Error al eliminar el modulo')
+        )
+        return
+      }
+
+      if (moduloActivo === modulo.id) setModuloActivo(null)
+      cargarDatos()
+    } catch (err) {
+      alert('Error de conexion al eliminar el modulo')
+    } finally {
+      setBorrandoId(null)
+    }
   }
 
   async function publicarCurso() {
@@ -171,9 +236,19 @@ export default function GestionarCursoPage() {
                         {modulo.lecciones?.length || 0} lecciones
                       </span>
                     </div>
-                    <span className="text-slate-400">
-                      {moduloActivo === modulo.id ? '▲' : '▼'}
-                    </span>
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={(e) => borrarModulo(modulo, e)}
+                        disabled={borrandoId === modulo.id}
+                        title="Eliminar modulo"
+                        className="text-slate-500 hover:text-red-400 transition-colors disabled:opacity-40"
+                      >
+                        🗑️
+                      </button>
+                      <span className="text-slate-400">
+                        {moduloActivo === modulo.id ? '▲' : '▼'}
+                      </span>
+                    </div>
                   </div>
 
                   {moduloActivo === modulo.id && (
@@ -192,6 +267,14 @@ export default function GestionarCursoPage() {
                               {leccion.es_gratis && (
                                 <span className="text-xs text-green-400 bg-green-500/10 px-2 py-0.5 rounded">Gratis</span>
                               )}
+                              <button
+                                onClick={() => borrarLeccion(leccion)}
+                                disabled={borrandoId === leccion.id}
+                                title="Eliminar leccion"
+                                className="text-slate-500 hover:text-red-400 transition-colors disabled:opacity-40 text-sm"
+                              >
+                                🗑️
+                              </button>
                             </div>
                           ))}
                         </div>
