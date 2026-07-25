@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import * as tus from 'tus-js-client'
 
 interface VideoUploadProps {
   cursoId: string
@@ -24,29 +25,27 @@ export default function VideoUpload({ cursoId, moduloId, orden, onSuccess }: Vid
 
   function subirACloudflare(uploadURL: string, video: File): Promise<void> {
     return new Promise((resolve, reject) => {
-      const formData = new FormData()
-      formData.append('file', video)
-
-      const xhr = new XMLHttpRequest()
-      xhr.open('POST', uploadURL)
-
-      xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable) {
+      // uploadURL ya es un endpoint TUS creado por Cloudflare (/stream/direct_upload):
+      // se usa uploadUrl para que tus-js-client no intente crear el upload de nuevo,
+      // solo haga los PATCH de los chunks.
+      const upload = new tus.Upload(video, {
+        uploadUrl: uploadURL,
+        // Cloudflare exige que el chunk sea multiplo de 256 KiB; 50 MiB lo cumple.
+        chunkSize: 50 * 1024 * 1024,
+        retryDelays: [0, 1000, 3000, 5000],
+        // El backend genera una uploadUrl nueva en cada intento (POST a
+        // /api/upload-video), asi que no queremos que tus-js-client guarde ni
+        // reutilice URLs viejas por fingerprint via localStorage.
+        storeFingerprintForResuming: false,
+        onProgress: (bytesSubidos, bytesTotal) => {
           // 0-10% pedir la URL, 10-90% subida real, 90-100% guardar en la BD
-          setProgreso(10 + Math.round((e.loaded / e.total) * 80))
-        }
-      }
+          setProgreso(10 + Math.round((bytesSubidos / bytesTotal) * 80))
+        },
+        onSuccess: () => resolve(),
+        onError: (error) => reject(error instanceof Error ? error : new Error(String(error))),
+      })
 
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          resolve()
-        } else {
-          reject(new Error(`Cloudflare respondio ${xhr.status}`))
-        }
-      }
-      xhr.onerror = () => reject(new Error('Error de red subiendo a Cloudflare'))
-
-      xhr.send(formData)
+      upload.start()
     })
   }
 
@@ -66,10 +65,12 @@ export default function VideoUpload({ cursoId, moduloId, orden, onSuccess }: Vid
 
     try {
       // Paso 1: pedir a nuestro backend una URL de subida directa a Cloudflare Stream
+      // (el tamano es obligatorio: Cloudflare lo necesita como Upload-Length
+      // al crear el upload TUS, antes de que se suba ningun byte)
       const creacion = await fetch('/api/upload-video', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ titulo }),
+        body: JSON.stringify({ titulo, tamano: archivo.size }),
       })
 
       const datosCreacion = await creacion.json()

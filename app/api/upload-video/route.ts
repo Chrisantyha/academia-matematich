@@ -52,38 +52,46 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, videoId })
     }
 
-    // Paso 1: pedir a Cloudflare Stream una URL de "Direct Creator Upload".
-    // El archivo ya no pasa por esta API route (evita el limite de tamano de
-    // body de Vercel) — el navegador sube el video directo a Cloudflare.
-    const { titulo } = body
+    // Paso 1: pedir a Cloudflare Stream una URL TUS de "Direct Creator Upload".
+    // /stream/direct_upload (JSON) solo genera URLs de "basic upload" -- un
+    // unico POST, max 200MB -- que rechazan HEAD/PATCH con 400. Para TUS hay
+    // que crear el upload contra /stream?direct_user=true con headers TUS; la
+    // uploadURL resultante sale en el header Location (no en el body) y sigue
+    // siendo de un solo uso, segura para el navegador (sin el API token).
+    const { titulo, tamano } = body
+
+    if (!tamano) {
+      return NextResponse.json({ error: 'Falta el tamano del archivo' }, { status: 400 })
+    }
+
+    const metadata = [
+      `name ${Buffer.from(titulo || 'video').toString('base64')}`,
+      `maxdurationseconds ${Buffer.from('7200').toString('base64')}`,
+    ].join(',')
 
     const response = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/stream/direct_upload`,
+      `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/stream?direct_user=true`,
       {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
-          'Content-Type': 'application/json',
+          'Tus-Resumable': '1.0.0',
+          'Upload-Length': String(tamano),
+          'Upload-Metadata': metadata,
         },
-        body: JSON.stringify({
-          maxDurationSeconds: 7200,
-          meta: { name: titulo || 'video' },
-          requireSignedURLs: false,
-        }),
       }
     )
 
-    const data = await response.json()
+    const uploadURL = response.headers.get('Location')
+    const videoId = response.headers.get('Stream-Media-ID')
 
-    if (!data.success) {
-      return NextResponse.json({ error: data.errors }, { status: 500 })
+    if (response.status !== 201 || !uploadURL || !videoId) {
+      const detalle = await response.text().catch(() => '')
+      console.error('Error al crear upload TUS en Cloudflare:', response.status, detalle)
+      return NextResponse.json({ error: 'Error al iniciar la subida' }, { status: 500 })
     }
 
-    return NextResponse.json({
-      ok: true,
-      uploadURL: data.result.uploadURL,
-      videoId: data.result.uid,
-    })
+    return NextResponse.json({ ok: true, uploadURL, videoId })
 
   } catch (error) {
     console.error('Error general:', error)

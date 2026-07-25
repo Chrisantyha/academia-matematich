@@ -1,93 +1,114 @@
 import { NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createAdminSupabaseClient } from '@/lib/supabase-admin'
 
-const PAYPHONE_TOKEN = process.env.PAYPHONE_TOKEN
+const PAYPHONE_STORE_ID = process.env.PAYPHONE_STORE_ID
 
 export async function POST(request: Request) {
+  let body: any
+
   try {
-    const body = await request.json()
-    console.log('PayPhone webhook recibido:', body)
+    body = await request.json()
+  } catch (err) {
+    console.error('PayPhone webhook: no se pudo deserializar el body', err)
+    return NextResponse.json({ Response: false, ErrorCode: '111' })
+  }
 
-    const { clientTransactionId, transactionStatus, id } = body
+  console.log('PayPhone webhook recibido:', body)
 
-    const supabase = await createServerSupabaseClient()
+  try {
+    const {
+      Amount,
+      AuthorizationCode,
+      ClientTransactionId,
+      StatusCode,
+      TransactionStatus,
+      StoreId,
+      TransactionId,
+    } = body ?? {}
 
-    // Verificar que el pago fue aprobado
-    if (transactionStatus !== 'Approved') {
-      await supabase
-        .from('compras')
-        .update({ estado: 'rechazado' })
-        .eq('payphone_transaction_id', clientTransactionId)
+    const missingField = [
+      Amount,
+      AuthorizationCode,
+      ClientTransactionId,
+      StatusCode,
+      TransactionStatus,
+      StoreId,
+      TransactionId,
+    ].some((value) => value === undefined || value === null || value === '')
 
-      return NextResponse.json({ ok: false, message: 'Pago no aprobado' })
+    if (missingField) {
+      console.error('PayPhone webhook: faltan campos requeridos', body)
+      return NextResponse.json({ Response: false, ErrorCode: '444' })
     }
 
-    // Verificar transacción con PayPhone (para evitar webhooks falsos)
-    const verifyResponse = await fetch(
-      `https://pay.payphonetodoesposible.com/api/button/V2/Confirm`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${PAYPHONE_TOKEN}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          id,
-          clientTransactionId,
-        }),
-      }
-    )
-
-    const verifyData = await verifyResponse.json()
-    console.log('PayPhone verificacion:', verifyData)
-
-    if (verifyData.transactionStatus !== 'Approved') {
-      await supabase
-        .from('compras')
-        .update({ estado: 'rechazado' })
-        .eq('payphone_transaction_id', clientTransactionId)
-
-      return NextResponse.json({ ok: false, message: 'Verificacion fallida' })
+    if (StoreId !== PAYPHONE_STORE_ID) {
+      console.error('PayPhone webhook: StoreId no coincide', { recibido: StoreId })
+      return NextResponse.json({ Response: false, ErrorCode: '666' })
     }
 
-    // Buscar la compra pendiente por el ID de transacción que YA guardamos
-    // al crear el link de pago (en vez de intentar parsear alumnoId/cursoId
-    // desde el clientTransactionId, que nunca los contuvo)
+    const supabase = createAdminSupabaseClient()
+
     const { data: compra, error: buscarError } = await supabase
       .from('compras')
-      .select('id, estado')
-      .eq('payphone_transaction_id', clientTransactionId)
+      .select('id, estado, payphone_numeric_id')
+      .eq('payphone_transaction_id', ClientTransactionId)
       .maybeSingle()
 
-    if (buscarError || !compra) {
-      console.error('No se encontró la compra para clientTransactionId:', clientTransactionId)
-      return NextResponse.json({ ok: false, message: 'Compra no encontrada' }, { status: 404 })
+    if (buscarError) {
+      console.error('PayPhone webhook: error buscando la compra', buscarError)
+      return NextResponse.json({ Response: false, ErrorCode: '222' })
     }
 
-    if (compra.estado === 'aprobado') {
-      return NextResponse.json({ ok: true, message: 'Compra ya registrada' })
+    if (!compra) {
+      console.error('PayPhone webhook: no se encontró compra para ClientTransactionId', ClientTransactionId)
+      return NextResponse.json({ Response: false, ErrorCode: '222' })
     }
 
-    const monto = verifyData.amount / 100
+    const yaProcesadaConEsteTransactionId =
+      compra.estado === 'aprobado' &&
+      compra.payphone_numeric_id !== null &&
+      Number(compra.payphone_numeric_id) === Number(TransactionId)
 
-    const { error } = await supabase
+    if (yaProcesadaConEsteTransactionId) {
+      console.log('PayPhone webhook: TransactionId duplicado, ya procesado', TransactionId)
+      return NextResponse.json({ Response: false, ErrorCode: '333' })
+    }
+
+    if (TransactionStatus !== 'Approved') {
+      const { error: rechazoError } = await supabase
+        .from('compras')
+        .update({ estado: 'rechazado' })
+        .eq('id', compra.id)
+
+      if (rechazoError) {
+        console.error('PayPhone webhook: error al marcar compra como rechazada', rechazoError)
+        return NextResponse.json({ Response: false, ErrorCode: '222' })
+      }
+
+      console.log('PayPhone webhook: transacción no aprobada', { ClientTransactionId, TransactionStatus, StatusCode })
+      return NextResponse.json({ Response: true, ErrorCode: '000' })
+    }
+
+    const { error: updateError } = await supabase
       .from('compras')
       .update({
         estado: 'aprobado',
-        monto,
+        monto: Amount / 100,
+        payphone_numeric_id: TransactionId,
+        payphone_authorization_code: AuthorizationCode,
       })
       .eq('id', compra.id)
 
-    if (error) {
-      console.error('Error al registrar compra:', error)
-      return NextResponse.json({ ok: false, message: 'Error al registrar compra' }, { status: 500 })
+    if (updateError) {
+      console.error('PayPhone webhook: error al aprobar la compra', updateError)
+      return NextResponse.json({ Response: false, ErrorCode: '222' })
     }
 
-    console.log('Compra registrada exitosamente')
-    return NextResponse.json({ ok: true, message: 'Compra registrada' })
+    console.log('PayPhone webhook: compra aprobada', { compraId: compra.id, TransactionId })
+    return NextResponse.json({ Response: true, ErrorCode: '000' })
 
   } catch (error) {
-    console.error('Webhook error:', error)
-    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+    console.error('PayPhone webhook: error inesperado', error)
+    return NextResponse.json({ Response: false, ErrorCode: '222' })
   }
 }
