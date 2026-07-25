@@ -1,0 +1,84 @@
+'use client'
+
+import { useState } from 'react'
+import Link from 'next/link'
+import { createClient } from '@/lib/supabase'
+
+export default function RecuperarPasswordPage() {
+  const [email, setEmail] = useState('')
+  const [enviado, setEnviado] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const supabase = createClient()
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+
+    await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/actualizar-password`,
+    })
+
+    // Mensaje siempre igual, exista o no el correo: no revelamos qué emails
+    // están registrados en la plataforma.
+    setLoading(false)
+    setEnviado(true)
+  }
+
+  return (
+    <main className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
+      <div className="w-full max-w-md">
+
+        <div className="text-center mb-8">
+          <Link href="/" className="text-2xl font-bold text-white">
+            Exacta<span className="text-yellow-500">Lab</span>
+          </Link>
+          <p className="text-slate-400 mt-2">Recupera el acceso a tu cuenta</p>
+        </div>
+
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8">
+          {enviado ? (
+            <div className="text-center">
+              <p className="text-slate-300 text-sm mb-6">
+                Si el correo está registrado, te enviamos un enlace para restablecer tu contraseña. Revisa tu bandeja de entrada (y la carpeta de spam).
+              </p>
+              <Link href="/login" className="text-yellow-500 font-semibold hover:text-yellow-400 text-sm">
+                Volver a inicio de sesión
+              </Link>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit}>
+              <div className="mb-6">
+                <label className="block text-sm font-semibold text-slate-300 mb-2">
+                  Correo electrónico
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="tu@correo.com"
+                  autoComplete="email"
+                  required
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-yellow-500 transition-colors"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-yellow-500 text-black font-bold py-3 rounded-xl hover:bg-yellow-400 transition-colors disabled:opacity-50"
+              >
+                {loading ? 'Enviando...' : 'Enviar enlace de recuperación'}
+              </button>
+
+              <p className="text-center text-slate-500 text-sm mt-6">
+                <Link href="/login" className="text-yellow-500 font-semibold hover:text-yellow-400">
+                  Volver a inicio de sesión
+                </Link>
+              </p>
+            </form>
+          )}
+        </div>
+      </div>
+    </main>
+  )
+}

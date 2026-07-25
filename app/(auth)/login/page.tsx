@@ -1,17 +1,20 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
+
+  const passwordActualizada = searchParams.get('mensaje') === 'password-actualizada'
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -57,6 +60,12 @@ export default function LoginPage() {
 
         <form onSubmit={handleLogin} className="bg-slate-900 border border-slate-800 rounded-2xl p-8">
 
+          {passwordActualizada && (
+            <div className="bg-green-500/10 border border-green-500/30 text-green-400 text-sm px-4 py-3 rounded-xl mb-5">
+              Tu contraseña se actualizó correctamente. Inicia sesión con la nueva contraseña.
+            </div>
+          )}
+
           <div className="mb-5">
             <label className="block text-sm font-semibold text-slate-300 mb-2">
               Correo electrónico
@@ -72,7 +81,7 @@ export default function LoginPage() {
             />
           </div>
 
-          <div className="mb-6">
+          <div className="mb-3">
             <label className="block text-sm font-semibold text-slate-300 mb-2">
               Contraseña
             </label>
@@ -85,6 +94,12 @@ export default function LoginPage() {
               required
               className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-yellow-500 transition-colors"
             />
+          </div>
+
+          <div className="text-right mb-6">
+            <Link href="/recuperar-password" className="text-slate-400 text-sm font-semibold hover:text-yellow-500 transition-colors">
+              ¿Olvidaste tu contraseña?
+            </Link>
           </div>
 
           {error && (
@@ -111,5 +126,13 @@ export default function LoginPage() {
         </form>
       </div>
     </main>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   )
 }

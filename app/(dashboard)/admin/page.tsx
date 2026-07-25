@@ -111,9 +111,18 @@ export default async function AdminDashboard() {
 
         <aside className="w-56 min-h-screen border-r border-slate-800 p-4 flex flex-col gap-1">
           <div className="text-xs font-bold uppercase tracking-widest text-slate-600 px-3 py-2 mt-2">Plataforma</div>
-          <a className="flex items-center gap-3 px-3 py-2 rounded-lg bg-yellow-500/10 text-yellow-500 font-medium text-sm border-l-2 border-yellow-500">
+          <Link
+            href="/admin"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg bg-yellow-500/10 text-yellow-500 font-medium text-sm border-l-2 border-yellow-500"
+          >
             <span>📊</span> Dashboard Global
-          </a>
+          </Link>
+          <Link
+            href="/admin/usuarios"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800/50 font-medium text-sm transition-colors"
+          >
+            <span>👥</span> Usuarios
+          </Link>
           <div className="mt-auto pt-4 border-t border-slate-800">
             <LogoutButton />
           </div>
