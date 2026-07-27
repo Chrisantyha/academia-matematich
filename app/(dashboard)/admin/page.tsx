@@ -2,9 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import LogoutButton from '@/components/auth/LogoutButton'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { createAdminSupabaseClient } from '@/lib/supabase-admin'
 import { getPerfil } from '@/lib/db'
-import { revalidatePath } from 'next/cache'
 
 export default async function AdminDashboard() {
   const supabase = await createServerSupabaseClient()
@@ -86,31 +84,6 @@ export default async function AdminDashboard() {
   const ingresosDelMes = (comprasAprobadas || [])
     .filter((c) => new Date(c.created_at) >= inicioMes)
     .reduce((acc, c) => acc + (c.monto || 0), 0)
-
-  async function aprobarCurso(formData: FormData) {
-    'use server'
-    const cursoId = formData.get('cursoId') as string
-    const supabase = await createServerSupabaseClient()
-    const { data: { user: solicitante } } = await supabase.auth.getUser()
-
-    if (!solicitante) return
-
-    const perfilSolicitante = await getPerfil(solicitante.id)
-    if (perfilSolicitante?.rol !== 'admin') {
-      console.error('aprobarCurso: intento no autorizado', { userId: solicitante.id })
-      return
-    }
-
-    const admin = createAdminSupabaseClient()
-    const { error } = await admin.from('cursos').update({ estado: 'publicado' }).eq('id', cursoId)
-
-    if (error) {
-      console.error('aprobarCurso: error al aprobar el curso', error)
-      return
-    }
-
-    revalidatePath('/admin')
-  }
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
@@ -252,15 +225,12 @@ export default async function AdminDashboard() {
                             Ver
                           </Link>
                         ) : c.estado === 'en_revision' ? (
-                          <form action={aprobarCurso}>
-                            <input type="hidden" name="cursoId" value={c.id} />
-                            <button
-                              type="submit"
-                              className="text-green-400 text-xs font-semibold hover:text-green-300 transition-colors"
-                            >
-                              Aprobar
-                            </button>
-                          </form>
+                          <Link
+                            href={`/admin/curso/${c.id}`}
+                            className="text-yellow-500 text-xs font-semibold hover:text-yellow-400 transition-colors"
+                          >
+                            🔍 Revisar
+                          </Link>
                         ) : (
                           <span className="text-slate-600 text-xs">Borrador</span>
                         )}
