@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { tieneAccesoCurso } from '@/lib/acceso'
 
 export async function POST(request: Request) {
   try {
@@ -11,6 +12,15 @@ export async function POST(request: Request) {
     }
 
     const { cursoId } = await request.json()
+
+    if (!cursoId) {
+      return NextResponse.json({ error: 'cursoId es requerido' }, { status: 400 })
+    }
+
+    const autorizado = await tieneAccesoCurso(supabase, user.id, cursoId)
+    if (!autorizado) {
+      return NextResponse.json({ error: 'No tienes acceso a este curso' }, { status: 403 })
+    }
 
     // Verificar que el alumno completo todas las lecciones
     const { data: lecciones } = await supabase

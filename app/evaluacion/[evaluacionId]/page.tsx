@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import TextoMath from '@/components/ui/TextoMath'
 import Link from 'next/link'
+import { tieneAccesoCurso } from '@/lib/acceso'
 
 interface Pregunta {
   id: string
@@ -32,6 +33,7 @@ export default function EvaluacionPage() {
   const [preguntas, setPreguntas] = useState<Pregunta[]>([])
   const [respuestas, setRespuestas] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
+  const [acceso, setAcceso] = useState<'verificando' | 'permitido' | 'denegado'>('verificando')
   const [enviando, setEnviando] = useState(false)
   const [errorEnvio, setErrorEnvio] = useState('')
   const [resultado, setResultado] = useState<{ puntaje: number; aprobado: boolean; correctas: number; total: number } | null>(null)
@@ -42,11 +44,34 @@ export default function EvaluacionPage() {
   }, [])
 
   async function cargarEvaluacion() {
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      setAcceso('denegado')
+      setLoading(false)
+      return
+    }
+
     const { data: evalData } = await supabase
       .from('evaluaciones')
       .select('id, titulo, nota_minima, intentos_permitidos, curso_id')
       .eq('id', evaluacionId)
       .single()
+
+    if (!evalData) {
+      setAcceso('denegado')
+      setLoading(false)
+      return
+    }
+
+    const autorizado = await tieneAccesoCurso(supabase, user.id, evalData.curso_id, { permitirDocenteAdmin: true })
+
+    if (!autorizado) {
+      setEvaluacion(evalData)
+      setAcceso('denegado')
+      setLoading(false)
+      return
+    }
 
     const { data: pregData } = await supabase
       .from('preguntas')
@@ -56,6 +81,7 @@ export default function EvaluacionPage() {
 
     setEvaluacion(evalData)
     setPreguntas(pregData || [])
+    setAcceso('permitido')
     setLoading(false)
   }
 
@@ -104,6 +130,24 @@ export default function EvaluacionPage() {
     return (
       <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
         <div className="text-slate-400">Cargando evaluación...</div>
+      </main>
+    )
+  }
+
+  if (acceso === 'denegado') {
+    return (
+      <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center px-4">
+        <div className="max-w-md w-full text-center">
+          <p className="text-slate-400 mb-6">
+            No tienes acceso a esta evaluación. Necesitas haber comprado el curso.
+          </p>
+          <Link
+            href={evaluacion ? `/cursos/${evaluacion.curso_id}` : '/cursos'}
+            className="text-yellow-500 font-semibold hover:text-yellow-400"
+          >
+            Ver el curso
+          </Link>
+        </div>
       </main>
     )
   }

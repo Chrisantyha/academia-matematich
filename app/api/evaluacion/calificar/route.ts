@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { tieneAccesoCurso } from '@/lib/acceso'
 
 export async function POST(request: Request) {
   try {
@@ -24,6 +25,11 @@ export async function POST(request: Request) {
 
     if (!evaluacion) {
       return NextResponse.json({ error: 'Evaluación no encontrada' }, { status: 404 })
+    }
+
+    const autorizado = await tieneAccesoCurso(supabase, user.id, evaluacion.curso_id, { permitirDocenteAdmin: true })
+    if (!autorizado) {
+      return NextResponse.json({ error: 'No tienes acceso a este curso' }, { status: 403 })
     }
 
     if (evaluacion.intentos_permitidos && evaluacion.intentos_permitidos > 0) {
