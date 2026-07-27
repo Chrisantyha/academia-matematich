@@ -27,6 +27,16 @@ export default function TablaUsuarios({
 }) {
   const router = useRouter()
   const [borrandoId, setBorrandoId] = useState<string | null>(null)
+  const [busqueda, setBusqueda] = useState('')
+
+  const usuariosFiltrados = usuarios.filter((u) => {
+    const texto = busqueda.trim().toLowerCase()
+    if (!texto) return true
+    return (
+      (u.nombre || '').toLowerCase().includes(texto) ||
+      (u.email || '').toLowerCase().includes(texto)
+    )
+  })
 
   async function borrarUsuario(usuario: Usuario) {
     if (usuario.rol === 'docente' && usuario.totalCursos > 0) {
@@ -68,10 +78,27 @@ export default function TablaUsuarios({
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
       <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
-        <h3 className="text-base font-bold">Usuarios ({usuarios.length})</h3>
+        <h3 className="text-base font-bold">
+          {busqueda.trim()
+            ? `Usuarios (${usuariosFiltrados.length} de ${usuarios.length})`
+            : `Usuarios (${usuarios.length})`}
+        </h3>
       </div>
+
+      <div className="px-6 py-4 border-b border-slate-800">
+        <input
+          type="text"
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          placeholder="Buscar por nombre o email..."
+          className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white placeholder-slate-500 outline-none focus:border-yellow-500 transition-colors"
+        />
+      </div>
+
       {usuarios.length === 0 ? (
         <div className="p-8 text-center text-slate-400 text-sm">No hay usuarios registrados.</div>
+      ) : usuariosFiltrados.length === 0 ? (
+        <div className="p-8 text-center text-slate-400 text-sm">No se encontraron usuarios.</div>
       ) : (
         <table className="w-full text-sm">
           <thead>
@@ -84,7 +111,7 @@ export default function TablaUsuarios({
             </tr>
           </thead>
           <tbody>
-            {usuarios.map((u) => (
+            {usuariosFiltrados.map((u) => (
               <tr key={u.id} className="border-b border-slate-800 hover:bg-slate-800/50 transition-colors">
                 <td className="px-6 py-4 font-semibold">{u.nombre || '—'}</td>
                 <td className="px-6 py-4 text-slate-400">{u.email}</td>
