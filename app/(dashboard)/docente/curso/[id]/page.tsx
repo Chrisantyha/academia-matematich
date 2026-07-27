@@ -455,6 +455,16 @@ export default function GestionarCursoPage() {
                       )}
                     </div>
                     <div className="flex items-center gap-4">
+                      {modulo.evaluaciones && modulo.evaluaciones.length > 0 && (
+                        <Link
+                          href={`/evaluacion/${modulo.evaluaciones[0].id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          title="Rendir evaluación (como docente)"
+                          className="text-slate-500 hover:text-green-400 transition-colors text-sm"
+                        >
+                          ▶️
+                        </Link>
+                      )}
                       <Link
                         href={`/docente/evaluacion/${modulo.id}`}
                         onClick={(e) => e.stopPropagation()}
