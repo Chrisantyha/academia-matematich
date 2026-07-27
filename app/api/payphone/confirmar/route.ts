@@ -39,6 +39,13 @@ function confirmarPayphone(id: string, clientTransactionId: string): Promise<any
 
 export async function POST(request: Request) {
   try {
+    const supabase = await createServerSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
+
     const { id, clientTransactionId } = await request.json()
 
     if (!id || !clientTransactionId) {
@@ -46,6 +53,17 @@ export async function POST(request: Request) {
     }
 
     console.log('Confirmando pago:', { id, clientTransactionId })
+
+    // Verificar que la compra pertenezca al usuario autenticado
+    const { data: compraExistente } = await supabase
+      .from('compras')
+      .select('alumno_id')
+      .eq('payphone_transaction_id', clientTransactionId)
+      .single()
+
+    if (!compraExistente || compraExistente.alumno_id !== user.id) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+    }
 
     // Preguntar a PayPhone si el pago fue aprobado
     const resultado = await confirmarPayphone(id, clientTransactionId)
@@ -59,8 +77,6 @@ export async function POST(request: Request) {
       })
     }
 
-    const supabase = await createServerSupabaseClient()
-
     // Actualizar la compra a aprobada
     const { data: compra, error } = await supabase
       .from('compras')
@@ -69,6 +85,7 @@ export async function POST(request: Request) {
         payphone_transaction_id: String(id),
       })
       .eq('payphone_transaction_id', clientTransactionId)
+      .eq('alumno_id', user.id)
       .select('curso_id')
       .single()
 
