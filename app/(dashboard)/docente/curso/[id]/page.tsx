@@ -237,6 +237,14 @@ export default function GestionarCursoPage() {
                       </span>
                     </div>
                     <div className="flex items-center gap-4">
+                      <Link
+                        href={`/docente/evaluacion/${modulo.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        title="Crear evaluación"
+                        className="text-slate-500 hover:text-yellow-400 transition-colors text-sm"
+                      >
+                        📝
+                      </Link>
                       <button
                         onClick={(e) => borrarModulo(modulo, e)}
                         disabled={borrandoId === modulo.id}
