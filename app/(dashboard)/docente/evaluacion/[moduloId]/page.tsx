@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
@@ -21,12 +21,44 @@ export default function CrearEvaluacionPage() {
   const moduloId = params.moduloId as string
   const supabase = createClient()
 
+  const [evaluacionId, setEvaluacionId] = useState<string | null>(null)
+  const [cargando, setCargando] = useState(true)
   const [titulo, setTitulo] = useState('')
   const [notaMinima, setNotaMinima] = useState(70)
   const [intentos, setIntentos] = useState(3)
   const [preguntas, setPreguntas] = useState<Pregunta[]>([])
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    async function cargarExistente() {
+      const { data: evalExistente } = await supabase
+        .from('evaluaciones')
+        .select('id, titulo, nota_minima, intentos_permitidos')
+        .eq('modulo_id', moduloId)
+        .maybeSingle()
+
+      if (evalExistente) {
+        setEvaluacionId(evalExistente.id)
+        setTitulo(evalExistente.titulo)
+        setNotaMinima(evalExistente.nota_minima)
+        setIntentos(evalExistente.intentos_permitidos)
+
+        const { data: pregExistentes } = await supabase
+          .from('preguntas')
+          .select('tipo, pregunta, opciones, respuesta_correcta, tolerancia, orden')
+          .eq('evaluacion_id', evalExistente.id)
+          .order('orden', { ascending: true })
+
+        setPreguntas((pregExistentes || []).map((p: any) => ({
+          ...p,
+          opciones: p.opciones || [],
+        })))
+      }
+      setCargando(false)
+    }
+    cargarExistente()
+  }, [moduloId])
 
   const preguntaVacia: Pregunta = {
     tipo: 'opcion_multiple',
@@ -98,27 +130,58 @@ export default function CrearEvaluacionPage() {
       .eq('id', moduloId)
       .single()
 
-    const { data: evalData, error: evalError } = await supabase
-      .from('evaluaciones')
-      .insert({
-        modulo_id: moduloId,
-        curso_id: moduloData?.curso_id,
-        titulo,
-        nota_minima: notaMinima,
-        intentos_permitidos: intentos,
-      })
-      .select()
-      .single()
+    let evalId = evaluacionId
 
-    if (evalError) {
-      setError('Error al guardar evaluacion')
-      setGuardando(false)
-      return
+    if (evalId) {
+      const { error: updateError } = await supabase
+        .from('evaluaciones')
+        .update({
+          titulo,
+          nota_minima: notaMinima,
+          intentos_permitidos: intentos,
+        })
+        .eq('id', evalId)
+
+      if (updateError) {
+        setError('Error al actualizar evaluacion')
+        setGuardando(false)
+        return
+      }
+
+      const { error: deleteError } = await supabase
+        .from('preguntas')
+        .delete()
+        .eq('evaluacion_id', evalId)
+
+      if (deleteError) {
+        setError('Error al actualizar las preguntas')
+        setGuardando(false)
+        return
+      }
+    } else {
+      const { data: evalData, error: evalError } = await supabase
+        .from('evaluaciones')
+        .insert({
+          modulo_id: moduloId,
+          curso_id: moduloData?.curso_id,
+          titulo,
+          nota_minima: notaMinima,
+          intentos_permitidos: intentos,
+        })
+        .select()
+        .single()
+
+      if (evalError) {
+        setError('Error al guardar evaluacion')
+        setGuardando(false)
+        return
+      }
+      evalId = evalData.id
     }
 
     for (const p of preguntas) {
       await supabase.from('preguntas').insert({
-        evaluacion_id: evalData.id,
+        evaluacion_id: evalId,
         tipo: p.tipo,
         pregunta: p.pregunta,
         opciones: p.tipo !== 'numerica' ? p.opciones : null,
@@ -128,8 +191,8 @@ export default function CrearEvaluacionPage() {
       })
     }
 
-    alert('Evaluacion guardada correctamente')
-      router.push(`/docente/curso/${moduloData?.curso_id}`)
+    alert(evaluacionId ? 'Evaluacion actualizada correctamente' : 'Evaluacion guardada correctamente')
+    router.push(`/docente/curso/${moduloData?.curso_id}`)
   }
 
   return (
@@ -151,13 +214,20 @@ export default function CrearEvaluacionPage() {
 
         <div className="mb-8">
           <div className="text-yellow-500 text-xs font-bold uppercase tracking-widest mb-2">
-            Crear evaluacion
+            {evaluacionId ? 'Editar evaluación' : 'Crear evaluacion'}
           </div>
-          <h1 className="text-3xl font-bold">Nueva evaluacion del modulo</h1>
+          <h1 className="text-3xl font-bold">
+            {evaluacionId ? 'Editar evaluación del módulo' : 'Nueva evaluacion del modulo'}
+          </h1>
           <p className="text-slate-400 mt-2 text-sm">
             Puedes usar LaTeX en las preguntas. Ejemplo: $x^2$ o $$\frac{"{x}"}{"{2}"}$$
           </p>
         </div>
+
+        {cargando ? (
+          <div className="text-slate-400 text-sm">Cargando...</div>
+        ) : (
+        <>
 
         {/* CONFIG GENERAL */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 mb-6">
@@ -371,7 +441,7 @@ export default function CrearEvaluacionPage() {
             disabled={guardando}
             className="bg-yellow-500 text-black font-bold px-8 py-3 rounded-xl hover:bg-yellow-400 transition-colors disabled:opacity-50"
           >
-            {guardando ? 'Guardando...' : 'Guardar evaluacion'}
+            {guardando ? 'Guardando...' : evaluacionId ? 'Guardar cambios' : 'Guardar evaluacion'}
           </button>
           <button
             onClick={() => router.back()}
@@ -380,6 +450,9 @@ export default function CrearEvaluacionPage() {
             Cancelar
           </button>
         </div>
+
+        </>
+        )}
 
       </div>
     </main>

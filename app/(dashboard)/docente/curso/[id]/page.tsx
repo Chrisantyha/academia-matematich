@@ -13,6 +13,7 @@ interface Modulo {
   titulo: string
   orden: number
   lecciones: Leccion[]
+  evaluaciones?: { id: string; titulo: string }[]
 }
 
 interface Leccion {
@@ -67,7 +68,8 @@ export default function GestionarCursoPage() {
         .from('modulos')
         .select(`
           *,
-          lecciones!lecciones_modulo_id_fkey (*)
+          lecciones!lecciones_modulo_id_fkey (*),
+          evaluaciones!evaluaciones_modulo_id_fkey (id, titulo)
         `)
         .eq('curso_id', cursoId)
         .order('orden', { ascending: true })
@@ -446,12 +448,17 @@ export default function GestionarCursoPage() {
                       <span className="text-slate-500 text-xs">
                         {modulo.lecciones?.length || 0} lecciones
                       </span>
+                      {modulo.evaluaciones && modulo.evaluaciones.length > 0 && (
+                        <span className="text-xs text-green-400 bg-green-500/10 px-2 py-0.5 rounded">
+                          ✓ Evaluación
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-4">
                       <Link
                         href={`/docente/evaluacion/${modulo.id}`}
                         onClick={(e) => e.stopPropagation()}
-                        title="Crear evaluación"
+                        title={modulo.evaluaciones && modulo.evaluaciones.length > 0 ? 'Editar evaluación' : 'Crear evaluación'}
                         className="text-slate-500 hover:text-yellow-400 transition-colors text-sm"
                       >
                         📝
