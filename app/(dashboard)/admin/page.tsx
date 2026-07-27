@@ -1,6 +1,8 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import LogoutButton from '@/components/auth/LogoutButton'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createAdminSupabaseClient } from '@/lib/supabase-admin'
 import { getPerfil } from '@/lib/db'
 import { revalidatePath } from 'next/cache'
 
@@ -9,14 +11,15 @@ export default async function AdminDashboard() {
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
-    return (
-      <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
-        <p className="text-slate-400">Debes iniciar sesión.</p>
-      </main>
-    )
+    redirect('/login')
   }
 
   const perfil = await getPerfil(user.id)
+
+  if (perfil?.rol !== 'admin') {
+    redirect(perfil?.rol === 'docente' ? '/docente' : '/alumno')
+  }
+
   const nombre = perfil?.nombre || user.email?.split('@')[0] || 'Administrador'
 
   const [
@@ -88,7 +91,24 @@ export default async function AdminDashboard() {
     'use server'
     const cursoId = formData.get('cursoId') as string
     const supabase = await createServerSupabaseClient()
-    await supabase.from('cursos').update({ publicado: true }).eq('id', cursoId)
+    const { data: { user: solicitante } } = await supabase.auth.getUser()
+
+    if (!solicitante) return
+
+    const perfilSolicitante = await getPerfil(solicitante.id)
+    if (perfilSolicitante?.rol !== 'admin') {
+      console.error('aprobarCurso: intento no autorizado', { userId: solicitante.id })
+      return
+    }
+
+    const admin = createAdminSupabaseClient()
+    const { error } = await admin.from('cursos').update({ publicado: true }).eq('id', cursoId)
+
+    if (error) {
+      console.error('aprobarCurso: error al aprobar el curso', error)
+      return
+    }
+
     revalidatePath('/admin')
   }
 
