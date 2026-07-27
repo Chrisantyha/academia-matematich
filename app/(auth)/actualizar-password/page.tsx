@@ -15,35 +15,13 @@ export default function ActualizarPasswordPage() {
   const router = useRouter()
   const supabase = createClient()
 
-  // El link de recuperación de Supabase trae un `code` en la URL. El cliente
-  // browser (flowType: pkce, detectSessionInUrl: true) lo intercambia por una
-  // sesión automáticamente al cargar la página y dispara PASSWORD_RECOVERY.
+  // app/auth/confirm/route.ts ya validó el token_hash server-side y dejó la
+  // sesión en cookies antes de redirigir aquí; solo confirmamos que exista.
   useEffect(() => {
-    let activo = true
-
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (activo && session) {
-        setEnlaceValido(true)
-        setVerificando(false)
-      }
+      setEnlaceValido(!!session)
+      setVerificando(false)
     })
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setEnlaceValido(true)
-        setVerificando(false)
-      }
-    })
-
-    const timeout = setTimeout(() => {
-      if (activo) setVerificando(false)
-    }, 3000)
-
-    return () => {
-      activo = false
-      subscription.unsubscribe()
-      clearTimeout(timeout)
-    }
   }, [supabase])
 
   async function handleActualizar(e: React.FormEvent) {

@@ -1,10 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 
-export default function RecuperarPasswordPage() {
+function RecuperarPasswordContent() {
+  const searchParams = useSearchParams()
+  const enlaceInvalido = searchParams.get('error') === 'enlace-invalido'
+
   const [email, setEmail] = useState('')
   const [enviado, setEnviado] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -36,6 +40,12 @@ export default function RecuperarPasswordPage() {
         </div>
 
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8">
+          {enlaceInvalido && !enviado && (
+            <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm px-4 py-3 rounded-xl mb-6">
+              El enlace ya no es válido o expiró. Solicita uno nuevo.
+            </div>
+          )}
+
           {enviado ? (
             <div className="text-center">
               <p className="text-slate-300 text-sm mb-6">
@@ -80,5 +90,17 @@ export default function RecuperarPasswordPage() {
         </div>
       </div>
     </main>
+  )
+}
+
+export default function RecuperarPasswordPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="text-slate-400">Cargando...</div>
+      </main>
+    }>
+      <RecuperarPasswordContent />
+    </Suspense>
   )
 }
