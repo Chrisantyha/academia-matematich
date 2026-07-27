@@ -105,3 +105,73 @@ export async function DELETE(
     return NextResponse.json({ error: 'Error al borrar el usuario' }, { status: 500 })
   }
 }
+
+const ROLES_VALIDOS = ['alumno', 'docente', 'admin']
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    const { rol } = await request.json()
+
+    if (!ROLES_VALIDOS.includes(rol)) {
+      return NextResponse.json({ error: 'Rol invalido' }, { status: 400 })
+    }
+
+    const supabase = await createServerSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
+
+    const { data: perfilSolicitante } = await supabase
+      .from('perfiles')
+      .select('rol')
+      .eq('id', user.id)
+      .single()
+
+    if (perfilSolicitante?.rol !== 'admin') {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+    }
+
+    if (id === user.id) {
+      return NextResponse.json({ error: 'No puedes cambiar tu propio rol' }, { status: 400 })
+    }
+
+    const admin = createAdminSupabaseClient()
+
+    const { data: perfilObjetivo, error: perfilError } = await admin
+      .from('perfiles')
+      .select('id')
+      .eq('id', id)
+      .maybeSingle()
+
+    if (perfilError) {
+      console.error('Error al buscar el usuario:', perfilError)
+      return NextResponse.json({ error: 'Error al buscar el usuario' }, { status: 500 })
+    }
+
+    if (!perfilObjetivo) {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
+    }
+
+    const { error: updateError } = await admin
+      .from('perfiles')
+      .update({ rol })
+      .eq('id', id)
+
+    if (updateError) {
+      console.error('Error al cambiar el rol:', updateError)
+      return NextResponse.json({ error: 'Error al cambiar el rol' }, { status: 500 })
+    }
+
+    return NextResponse.json({ ok: true })
+
+  } catch (error) {
+    console.error('Error general al cambiar rol:', error)
+    return NextResponse.json({ error: 'Error al cambiar el rol' }, { status: 500 })
+  }
+}

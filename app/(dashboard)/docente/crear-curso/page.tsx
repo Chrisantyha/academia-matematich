@@ -1,24 +1,39 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 
-const categorias = ['Calculo', 'Algebra', 'Fisica', 'Estadistica', 'EDO', 'Geometria']
 const niveles = ['bachillerato', 'universitario', 'posgrado']
 
 export default function CrearCursoPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [categorias, setCategorias] = useState<string[]>([])
   const [form, setForm] = useState({
     titulo: '',
     descripcion: '',
     precio: '9',
-    categoria: 'Calculo',
+    categoria: '',
     nivel: 'universitario',
   })
+
+  useEffect(() => {
+    async function cargarCategorias() {
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('categorias')
+        .select('nombre')
+        .order('nombre', { ascending: true })
+
+      const nombres = (data || []).map((c) => c.nombre)
+      setCategorias(nombres)
+      setForm((f) => ({ ...f, categoria: f.categoria || nombres[0] || '' }))
+    }
+    cargarCategorias()
+  }, [])
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
     setForm({ ...form, [e.target.name]: e.target.value })

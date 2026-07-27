@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase'
 import VideoUpload from '@/components/curso/VideoUpload'
 import { useParams } from 'next/navigation'
 
+const NIVELES = ['bachillerato', 'universitario', 'posgrado']
+
 interface Modulo {
   id: string
   titulo: string
@@ -34,6 +36,16 @@ export default function GestionarCursoPage() {
   const [agregandoModulo, setAgregandoModulo] = useState(false)
   const [moduloActivo, setModuloActivo] = useState<string | null>(null)
   const [borrandoId, setBorrandoId] = useState<string | null>(null)
+  const [editandoCurso, setEditandoCurso] = useState(false)
+  const [guardandoCurso, setGuardandoCurso] = useState(false)
+  const [categoriasDisponibles, setCategoriasDisponibles] = useState<string[]>([])
+  const [formCurso, setFormCurso] = useState({
+    titulo: '',
+    descripcion: '',
+    precio: '',
+    categoria: '',
+    nivel: NIVELES[0],
+  })
 
   useEffect(() => {
     cargarDatos(true)
@@ -61,6 +73,13 @@ export default function GestionarCursoPage() {
         .order('orden', { ascending: true })
 
       setModulos(modulosData || [])
+
+      const { data: categoriasData } = await supabase
+        .from('categorias')
+        .select('nombre')
+        .order('nombre', { ascending: true })
+
+      setCategoriasDisponibles((categoriasData || []).map((c) => c.nombre))
     } catch (err) {
       console.error('Error al cargar datos del curso:', err)
     } finally {
@@ -148,6 +167,99 @@ export default function GestionarCursoPage() {
     }
   }
 
+  async function renombrarModulo(modulo: Modulo, e: React.MouseEvent) {
+    e.stopPropagation()
+
+    const nuevoTitulo = window.prompt('Nuevo título del módulo:', modulo.titulo)
+    if (!nuevoTitulo || !nuevoTitulo.trim() || nuevoTitulo.trim() === modulo.titulo) return
+
+    try {
+      const response = await fetch(`/api/modulos/${modulo.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ titulo: nuevoTitulo.trim() }),
+      })
+      const data = await response.json()
+
+      if (!data.ok) {
+        alert(data.error || 'Error al renombrar el modulo')
+        return
+      }
+
+      cargarDatos()
+    } catch (err) {
+      alert('Error de conexion al renombrar el modulo')
+    }
+  }
+
+  async function renombrarLeccion(leccion: Leccion) {
+    const nuevoTitulo = window.prompt('Nuevo título de la lección:', leccion.titulo)
+    if (!nuevoTitulo || !nuevoTitulo.trim() || nuevoTitulo.trim() === leccion.titulo) return
+
+    try {
+      const response = await fetch(`/api/lecciones/${leccion.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ titulo: nuevoTitulo.trim() }),
+      })
+      const data = await response.json()
+
+      if (!data.ok) {
+        alert(data.error || 'Error al renombrar la leccion')
+        return
+      }
+
+      cargarDatos()
+    } catch (err) {
+      alert('Error de conexion al renombrar la leccion')
+    }
+  }
+
+  function abrirEdicionCurso() {
+    setFormCurso({
+      titulo: curso?.titulo || '',
+      descripcion: curso?.descripcion || '',
+      precio: String(curso?.precio ?? ''),
+      categoria: curso?.categoria || categoriasDisponibles[0] || '',
+      nivel: curso?.nivel || NIVELES[0],
+    })
+    setEditandoCurso(true)
+  }
+
+  function handleFormCursoChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
+    setFormCurso({ ...formCurso, [e.target.name]: e.target.value })
+  }
+
+  async function guardarCurso() {
+    setGuardandoCurso(true)
+    try {
+      const response = await fetch(`/api/cursos/${cursoId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          titulo: formCurso.titulo,
+          descripcion: formCurso.descripcion,
+          precio: parseFloat(formCurso.precio),
+          categoria: formCurso.categoria,
+          nivel: formCurso.nivel,
+        }),
+      })
+      const data = await response.json()
+
+      if (!data.ok) {
+        alert(data.error || 'Error al actualizar el curso')
+        return
+      }
+
+      setCurso(data.curso)
+      setEditandoCurso(false)
+    } catch (err) {
+      alert('Error de conexion al actualizar el curso')
+    } finally {
+      setGuardandoCurso(false)
+    }
+  }
+
   async function publicarCurso() {
     await supabase
       .from('cursos')
@@ -200,15 +312,112 @@ export default function GestionarCursoPage() {
               </span>
             </div>
           </div>
-          {!curso?.publicado && (
+          <div className="flex gap-3">
             <button
-              onClick={publicarCurso}
-              className="bg-yellow-500 text-black font-bold px-6 py-3 rounded-xl hover:bg-yellow-400 transition-colors text-sm"
+              onClick={abrirEdicionCurso}
+              className="border border-slate-700 text-white font-semibold px-6 py-3 rounded-xl hover:bg-slate-800 transition-colors text-sm"
             >
-              Enviar a revision
+              ✏️ Editar curso
             </button>
-          )}
+            {!curso?.publicado && (
+              <button
+                onClick={publicarCurso}
+                className="bg-yellow-500 text-black font-bold px-6 py-3 rounded-xl hover:bg-yellow-400 transition-colors text-sm"
+              >
+                Enviar a revision
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* EDITAR CURSO */}
+        {editandoCurso && (
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 mb-8">
+            <h3 className="text-sm font-bold mb-4">Editar curso</h3>
+
+            <div className="mb-4">
+              <label className="block text-sm font-semibold text-slate-300 mb-2">Titulo</label>
+              <input
+                type="text"
+                name="titulo"
+                value={formCurso.titulo}
+                onChange={handleFormCursoChange}
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-yellow-500 transition-colors"
+              />
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-semibold text-slate-300 mb-2">Descripcion</label>
+              <textarea
+                name="descripcion"
+                value={formCurso.descripcion}
+                onChange={handleFormCursoChange}
+                rows={4}
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-yellow-500 transition-colors resize-none"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-300 mb-2">Categoria</label>
+                <select
+                  name="categoria"
+                  value={formCurso.categoria}
+                  onChange={handleFormCursoChange}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 transition-colors"
+                >
+                  {categoriasDisponibles.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-300 mb-2">Nivel</label>
+                <select
+                  name="nivel"
+                  value={formCurso.nivel}
+                  onChange={handleFormCursoChange}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 transition-colors"
+                >
+                  {NIVELES.map((n) => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-slate-300 mb-2">Precio (USD)</label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
+                <input
+                  type="number"
+                  name="precio"
+                  value={formCurso.precio}
+                  onChange={handleFormCursoChange}
+                  min="1"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-8 pr-4 py-3 text-white outline-none focus:border-yellow-500 transition-colors"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={guardarCurso}
+                disabled={guardandoCurso}
+                className="bg-yellow-500 text-black font-bold px-6 py-3 rounded-xl hover:bg-yellow-400 transition-colors disabled:opacity-50 text-sm"
+              >
+                {guardandoCurso ? 'Guardando...' : 'Guardar cambios'}
+              </button>
+              <button
+                onClick={() => setEditandoCurso(false)}
+                className="border border-slate-700 text-white font-semibold px-6 py-3 rounded-xl hover:bg-slate-800 transition-colors text-sm"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* MODULOS */}
         <div className="mb-6">
@@ -246,6 +455,13 @@ export default function GestionarCursoPage() {
                         📝
                       </Link>
                       <button
+                        onClick={(e) => renombrarModulo(modulo, e)}
+                        title="Renombrar modulo"
+                        className="text-slate-500 hover:text-yellow-400 transition-colors"
+                      >
+                        ✏️
+                      </button>
+                      <button
                         onClick={(e) => borrarModulo(modulo, e)}
                         disabled={borrandoId === modulo.id}
                         title="Eliminar modulo"
@@ -275,6 +491,13 @@ export default function GestionarCursoPage() {
                               {leccion.es_gratis && (
                                 <span className="text-xs text-green-400 bg-green-500/10 px-2 py-0.5 rounded">Gratis</span>
                               )}
+                              <button
+                                onClick={() => renombrarLeccion(leccion)}
+                                title="Renombrar leccion"
+                                className="text-slate-500 hover:text-yellow-400 transition-colors text-sm"
+                              >
+                                ✏️
+                              </button>
                               <button
                                 onClick={() => borrarLeccion(leccion)}
                                 disabled={borrandoId === leccion.id}

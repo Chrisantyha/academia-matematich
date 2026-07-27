@@ -89,3 +89,75 @@ export async function DELETE(
     return NextResponse.json({ error: 'Error al borrar la leccion' }, { status: 500 })
   }
 }
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    const { titulo } = await request.json()
+
+    if (!titulo || !titulo.trim()) {
+      return NextResponse.json({ error: 'El titulo no puede estar vacio' }, { status: 400 })
+    }
+
+    const supabase = await createServerSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
+
+    const { data: perfil } = await supabase
+      .from('perfiles')
+      .select('rol')
+      .eq('id', user.id)
+      .single()
+
+    const rol = perfil?.rol || 'alumno'
+
+    if (rol !== 'docente' && rol !== 'admin') {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+    }
+
+    const { data: leccion } = await supabase
+      .from('lecciones')
+      .select('id, curso_id')
+      .eq('id', id)
+      .single()
+
+    if (!leccion) {
+      return NextResponse.json({ error: 'Leccion no encontrada' }, { status: 404 })
+    }
+
+    // Solo el docente dueño del curso (o un admin) puede renombrar la leccion.
+    if (rol !== 'admin') {
+      const { data: curso } = await supabase
+        .from('cursos')
+        .select('docente_id')
+        .eq('id', leccion.curso_id)
+        .single()
+
+      if (!curso || curso.docente_id !== user.id) {
+        return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+      }
+    }
+
+    const { error: updateError } = await supabase
+      .from('lecciones')
+      .update({ titulo: titulo.trim() })
+      .eq('id', id)
+
+    if (updateError) {
+      console.error('Error al renombrar leccion:', updateError)
+      return NextResponse.json({ error: 'Error al renombrar la leccion' }, { status: 500 })
+    }
+
+    return NextResponse.json({ ok: true })
+
+  } catch (error) {
+    console.error('Error general al renombrar leccion:', error)
+    return NextResponse.json({ error: 'Error al renombrar la leccion' }, { status: 500 })
+  }
+}

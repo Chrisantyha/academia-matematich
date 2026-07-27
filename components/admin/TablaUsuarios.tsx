@@ -27,6 +27,7 @@ export default function TablaUsuarios({
 }) {
   const router = useRouter()
   const [borrandoId, setBorrandoId] = useState<string | null>(null)
+  const [cambiandoId, setCambiandoId] = useState<string | null>(null)
   const [busqueda, setBusqueda] = useState('')
 
   const usuariosFiltrados = usuarios.filter((u) => {
@@ -75,6 +76,41 @@ export default function TablaUsuarios({
     }
   }
 
+  async function cambiarRol(usuario: Usuario, nuevoRol: string, e: React.ChangeEvent<HTMLSelectElement>) {
+    if (nuevoRol === usuario.rol) return
+
+    if (
+      nuevoRol === 'admin' &&
+      !window.confirm(`¿Convertir a "${usuario.nombre || usuario.email}" en administrador? Esto le dará acceso completo al panel de administración.`)
+    ) {
+      e.target.value = usuario.rol
+      return
+    }
+
+    setCambiandoId(usuario.id)
+    try {
+      const response = await fetch(`/api/usuarios/${usuario.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rol: nuevoRol }),
+      })
+      const data = await response.json()
+
+      if (!data.ok) {
+        alert(data.error || 'Error al cambiar el rol')
+        e.target.value = usuario.rol
+        return
+      }
+
+      router.refresh()
+    } catch {
+      alert('Error de conexión al cambiar el rol')
+      e.target.value = usuario.rol
+    } finally {
+      setCambiandoId(null)
+    }
+  }
+
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
       <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
@@ -116,9 +152,22 @@ export default function TablaUsuarios({
                 <td className="px-6 py-4 font-semibold">{u.nombre || '—'}</td>
                 <td className="px-6 py-4 text-slate-400">{u.email}</td>
                 <td className="px-6 py-4">
-                  <span className="text-xs font-bold px-3 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
-                    {ROL_LABEL[u.rol] || u.rol}
-                  </span>
+                  {u.id === adminActualId ? (
+                    <span className="text-xs font-bold px-3 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                      {ROL_LABEL[u.rol] || u.rol}
+                    </span>
+                  ) : (
+                    <select
+                      defaultValue={u.rol}
+                      disabled={cambiandoId === u.id}
+                      onChange={(e) => cambiarRol(u, e.target.value, e)}
+                      className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-300 outline-none focus:border-yellow-500 disabled:opacity-50"
+                    >
+                      <option value="alumno">Alumno</option>
+                      <option value="docente">Docente</option>
+                      <option value="admin">Administrador</option>
+                    </select>
+                  )}
                 </td>
                 <td className="px-6 py-4 text-slate-400">
                   {new Date(u.created_at).toLocaleDateString('es-EC', { year: 'numeric', month: 'short', day: 'numeric' })}

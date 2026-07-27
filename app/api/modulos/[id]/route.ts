@@ -114,3 +114,75 @@ export async function DELETE(
     }, { status: 500 })
   }
 }
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    const { titulo } = await request.json()
+
+    if (!titulo || !titulo.trim()) {
+      return NextResponse.json({ error: 'El titulo no puede estar vacio' }, { status: 400 })
+    }
+
+    const supabase = await createServerSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
+
+    const { data: perfil } = await supabase
+      .from('perfiles')
+      .select('rol')
+      .eq('id', user.id)
+      .single()
+
+    const rol = perfil?.rol || 'alumno'
+
+    if (rol !== 'docente' && rol !== 'admin') {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+    }
+
+    const { data: modulo } = await supabase
+      .from('modulos')
+      .select('id, curso_id')
+      .eq('id', id)
+      .single()
+
+    if (!modulo) {
+      return NextResponse.json({ error: 'Modulo no encontrado' }, { status: 404 })
+    }
+
+    // Solo el docente dueño del curso (o un admin) puede renombrar el modulo.
+    if (rol !== 'admin') {
+      const { data: curso } = await supabase
+        .from('cursos')
+        .select('docente_id')
+        .eq('id', modulo.curso_id)
+        .single()
+
+      if (!curso || curso.docente_id !== user.id) {
+        return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+      }
+    }
+
+    const { error: updateError } = await supabase
+      .from('modulos')
+      .update({ titulo: titulo.trim() })
+      .eq('id', id)
+
+    if (updateError) {
+      console.error('Error al renombrar modulo:', updateError)
+      return NextResponse.json({ error: 'Error al renombrar el modulo' }, { status: 500 })
+    }
+
+    return NextResponse.json({ ok: true })
+
+  } catch (error) {
+    console.error('Error general al renombrar modulo:', error)
+    return NextResponse.json({ error: 'Error al renombrar el modulo' }, { status: 500 })
+  }
+}
