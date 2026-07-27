@@ -11,7 +11,7 @@ export async function GET() {
         *,
         perfiles (nombre)
       `)
-      .eq('publicado', true)
+      .eq('estado', 'publicado')
       .order('created_at', { ascending: false })
 
     if (error) {

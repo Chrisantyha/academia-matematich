@@ -10,7 +10,7 @@ export async function getCursos() {
       *,
       perfiles (nombre, avatar_url)
     `)
-    .eq('publicado', true)
+    .eq('estado', 'publicado')
     .order('created_at', { ascending: false })
 
   if (error) console.error(error)

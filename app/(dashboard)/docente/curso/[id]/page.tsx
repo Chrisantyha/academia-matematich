@@ -263,10 +263,10 @@ export default function GestionarCursoPage() {
   async function publicarCurso() {
     await supabase
       .from('cursos')
-      .update({ publicado: true })
+      .update({ estado: 'en_revision' })
       .eq('id', cursoId)
 
-    setCurso({ ...curso, publicado: true })
+    setCurso({ ...curso, estado: 'en_revision' })
     alert('Curso enviado a revision. El admin lo aprobara pronto.')
   }
 
@@ -304,11 +304,13 @@ export default function GestionarCursoPage() {
             <div className="flex gap-3 mt-3">
               <span className="text-yellow-500 font-bold">${curso?.precio}</span>
               <span className={`text-xs font-bold px-2 py-1 rounded-full ${
-                curso?.publicado
+                curso?.estado === 'publicado'
                   ? 'bg-green-500/10 text-green-400 border border-green-500/30'
-                  : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/30'
+                  : curso?.estado === 'en_revision'
+                  ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/30'
+                  : 'bg-slate-800 text-slate-400 border border-slate-700'
               }`}>
-                {curso?.publicado ? 'Publicado' : 'Borrador'}
+                {curso?.estado === 'publicado' ? 'Publicado' : curso?.estado === 'en_revision' ? 'En revisión' : 'Borrador'}
               </span>
             </div>
           </div>
@@ -319,7 +321,7 @@ export default function GestionarCursoPage() {
             >
               ✏️ Editar curso
             </button>
-            {!curso?.publicado && (
+            {curso?.estado === 'borrador' && (
               <button
                 onClick={publicarCurso}
                 className="bg-yellow-500 text-black font-bold px-6 py-3 rounded-xl hover:bg-yellow-400 transition-colors text-sm"

@@ -20,7 +20,7 @@ export default async function DocenteDashboard() {
     supabase
       .from('cursos')
       .select(`
-        id, titulo, precio, publicado, categoria,
+        id, titulo, precio, estado, categoria,
         modulos ( lecciones ( id ) )
       `)
       .eq('docente_id', user.id)
@@ -55,7 +55,7 @@ export default async function DocenteDashboard() {
         id: curso.id,
         titulo: curso.titulo,
         categoria: curso.categoria,
-        publicado: curso.publicado,
+        estado: curso.estado,
         lecciones: totalLecciones,
         alumnos,
         ingresos,
@@ -65,8 +65,8 @@ export default async function DocenteDashboard() {
 
   const totalEstudiantes = cursosConDatos.reduce((acc, c) => acc + c.alumnos, 0)
   const totalIngresos = cursosConDatos.reduce((acc, c) => acc + c.ingresos, 0)
-  const cursosPublicados = cursosConDatos.filter((c) => c.publicado).length
-  const cursosEnRevision = cursosConDatos.filter((c) => !c.publicado).length
+  const cursosPublicados = cursosConDatos.filter((c) => c.estado === 'publicado').length
+  const cursosEnRevision = cursosConDatos.filter((c) => c.estado === 'en_revision').length
   const totalLeccionesGeneral = cursosConDatos.reduce((acc, c) => acc + c.lecciones, 0)
 
   return (
@@ -106,14 +106,14 @@ export default async function DocenteDashboard() {
 
           {cursosEnRevision > 0 && (
             <div className="bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-sm px-4 py-3 rounded-xl mb-6">
-              📝 Tienes {cursosEnRevision} curso(s) en borrador, sin publicar todavía.
+              ⏳ Tienes {cursosEnRevision} curso(s) en revisión, esperando aprobación del admin.
             </div>
           )}
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             {[
               { label: 'Estudiantes totales', value: String(totalEstudiantes), sub: 'En todos tus cursos', color: 'text-yellow-500' },
-              { label: 'Cursos publicados', value: String(cursosPublicados), sub: `${cursosEnRevision} en borrador`, color: 'text-sky-400' },
+              { label: 'Cursos publicados', value: String(cursosPublicados), sub: `${cursosEnRevision} en revisión`, color: 'text-sky-400' },
               { label: 'Lecciones totales', value: String(totalLeccionesGeneral), sub: 'Contenido subido', color: 'text-green-400' },
               { label: 'Ingresos totales', value: `$${totalIngresos.toFixed(2)}`, sub: 'De compras aprobadas', color: 'text-purple-400' },
             ].map((s) => (
@@ -169,11 +169,13 @@ export default async function DocenteDashboard() {
                       <td className="px-6 py-4 text-slate-400">{c.alumnos}</td>
                       <td className="px-6 py-4">
                         <span className={`text-xs font-bold px-3 py-1 rounded-full ${
-                          c.publicado
+                          c.estado === 'publicado'
                             ? 'bg-green-500/10 text-green-400 border border-green-500/30'
-                            : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/30'
+                            : c.estado === 'en_revision'
+                            ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/30'
+                            : 'bg-slate-800 text-slate-400 border border-slate-700'
                         }`}>
-                          {c.publicado ? 'Publicado' : 'Borrador'}
+                          {c.estado === 'publicado' ? 'Publicado' : c.estado === 'en_revision' ? 'En revisión' : 'Borrador'}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-yellow-500 font-bold">${c.ingresos.toFixed(2)}</td>

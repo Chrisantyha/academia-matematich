@@ -66,7 +66,7 @@ export default function CrearCursoPage() {
         categoria: form.categoria,
         nivel: form.nivel,
         docente_id: user.id,
-        publicado: false,
+        estado: 'borrador',
       })
       .select()
       .single()

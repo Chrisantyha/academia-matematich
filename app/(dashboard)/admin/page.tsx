@@ -30,7 +30,7 @@ export default async function AdminDashboard() {
     supabase
       .from('cursos')
       .select(`
-        id, titulo, publicado, precio,
+        id, titulo, estado, precio,
         docente_id,
         perfiles ( nombre, email ),
         modulos ( lecciones ( id ) )
@@ -59,7 +59,7 @@ export default async function AdminDashboard() {
       id: curso.id,
       titulo: curso.titulo,
       docenteNombre: curso.perfiles?.nombre || 'Sin asignar',
-      publicado: curso.publicado,
+      estado: curso.estado,
       lecciones: totalLecciones,
       alumnos: datosCompras.alumnos,
       ingresos: datosCompras.ingresos,
@@ -76,8 +76,8 @@ export default async function AdminDashboard() {
   }
   const docentes = Array.from(docentesMap.values())
 
-  const cursosPublicados = cursosConDatos.filter((c) => c.publicado).length
-  const cursosEnRevision = cursosConDatos.filter((c) => !c.publicado).length
+  const cursosPublicados = cursosConDatos.filter((c) => c.estado === 'publicado').length
+  const cursosEnRevision = cursosConDatos.filter((c) => c.estado === 'en_revision').length
   const ingresosTotales = (comprasAprobadas || []).reduce((acc, c) => acc + (c.monto || 0), 0)
 
   const inicioMes = new Date()
@@ -102,7 +102,7 @@ export default async function AdminDashboard() {
     }
 
     const admin = createAdminSupabaseClient()
-    const { error } = await admin.from('cursos').update({ publicado: true }).eq('id', cursoId)
+    const { error } = await admin.from('cursos').update({ estado: 'publicado' }).eq('id', cursoId)
 
     if (error) {
       console.error('aprobarCurso: error al aprobar el curso', error)
@@ -233,23 +233,25 @@ export default async function AdminDashboard() {
                       <td className="px-6 py-4 text-slate-400">{c.alumnos}</td>
                       <td className="px-6 py-4">
                         <span className={`text-xs font-bold px-3 py-1 rounded-full ${
-                          c.publicado
+                          c.estado === 'publicado'
                             ? 'bg-green-500/10 text-green-400 border border-green-500/30'
-                            : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/30'
+                            : c.estado === 'en_revision'
+                            ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/30'
+                            : 'bg-slate-800 text-slate-400 border border-slate-700'
                         }`}>
-                          {c.publicado ? 'Publicado' : 'En revisión'}
+                          {c.estado === 'publicado' ? 'Publicado' : c.estado === 'en_revision' ? 'En revisión' : 'Borrador'}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-yellow-500 font-bold">${c.ingresos.toFixed(2)}</td>
                       <td className="px-6 py-4">
-                        {c.publicado ? (
+                        {c.estado === 'publicado' ? (
                           <Link
                             href={`/cursos/${c.id}`}
                             className="text-yellow-500 text-xs font-semibold hover:text-yellow-400 transition-colors"
                           >
                             Ver
                           </Link>
-                        ) : (
+                        ) : c.estado === 'en_revision' ? (
                           <form action={aprobarCurso}>
                             <input type="hidden" name="cursoId" value={c.id} />
                             <button
@@ -259,6 +261,8 @@ export default async function AdminDashboard() {
                               Aprobar
                             </button>
                           </form>
+                        ) : (
+                          <span className="text-slate-600 text-xs">Borrador</span>
                         )}
                       </td>
                     </tr>
