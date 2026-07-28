@@ -31,6 +31,7 @@ export default function EvaluacionPage() {
   const [respuestas, setRespuestas] = useState<Record<string, string | RespuestaPar>>({})
   const [loading, setLoading] = useState(true)
   const [intentoId, setIntentoId] = useState<string | null>(null)
+  const [esDocenteAdmin, setEsDocenteAdmin] = useState(false)
   const [acceso, setAcceso] = useState<'verificando' | 'permitido' | 'denegado' | 'sin_intentos'>('verificando')
   const [mensajeAcceso, setMensajeAcceso] = useState('')
   const [enviando, setEnviando] = useState(false)
@@ -63,6 +64,7 @@ export default function EvaluacionPage() {
       setEvaluacion(data.evaluacion)
       setPreguntas(data.preguntas || [])
       setIntentoId(data.intentoId)
+      setEsDocenteAdmin(!!data.esDocenteAdmin)
       setAcceso('permitido')
       setLoading(false)
     } catch (err) {
@@ -116,6 +118,11 @@ export default function EvaluacionPage() {
     } finally {
       setEnviando(false)
     }
+  }
+
+  function destinoCurso(cursoId: string | undefined) {
+    if (!cursoId) return '/cursos'
+    return esDocenteAdmin ? `/docente/curso/${cursoId}` : `/cursos/${cursoId}`
   }
 
   if (loading) {
@@ -199,7 +206,7 @@ export default function EvaluacionPage() {
           <div className="flex gap-3 justify-center">
             {resultado.aprobado ? (
               <Link
-                href={`/cursos/${evaluacion?.curso_id}`}
+                href={destinoCurso(evaluacion?.curso_id)}
                 className="bg-yellow-500 text-black font-bold px-8 py-3 rounded-xl hover:bg-yellow-400 transition-colors"
               >
                 Continuar curso
@@ -240,7 +247,15 @@ export default function EvaluacionPage() {
         <Link href="/" className="text-xl font-bold">
           Exacta<span className="text-yellow-500">Lab</span>
         </Link>
-        <span className="text-slate-400 text-sm">{evaluacion?.titulo}</span>
+        <div className="flex items-center gap-4">
+          <Link
+            href={destinoCurso(evaluacion?.curso_id)}
+            className="text-slate-400 text-sm hover:text-white transition-colors"
+          >
+            ← Volver al curso
+          </Link>
+          <span className="text-slate-400 text-sm">{evaluacion?.titulo}</span>
+        </div>
       </div>
 
       <div className="max-w-2xl mx-auto px-8 py-12">

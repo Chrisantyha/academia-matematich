@@ -90,6 +90,7 @@ export async function POST(request: Request) {
         return NextResponse.json({
           ok: true,
           intentoId: ultimoIntento.id,
+          esDocenteAdmin,
           evaluacion: { id: evaluacion.id, titulo: evaluacion.titulo, curso_id: evaluacion.curso_id },
           preguntas: sinRespuestaCorrecta(ultimoIntento.preguntas as PreguntaSnapshot[]),
         })
@@ -173,6 +174,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       ok: true,
       intentoId: nuevoIntento.id,
+      esDocenteAdmin,
       evaluacion: { id: evaluacion.id, titulo: evaluacion.titulo, curso_id: evaluacion.curso_id },
       preguntas: sinRespuestaCorrecta(snapshot),
     })
