@@ -1,4 +1,4 @@
-type TipoPlantilla =
+export type TipoPlantilla =
   | 'ecuacion_lineal'
   | 'sistema_2x2'
   | 'factorizacion_trinomio'
