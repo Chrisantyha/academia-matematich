@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { tieneAccesoCurso } from '@/lib/acceso'
+import { tieneAccesoCurso, esDocenteOAdminDelCurso } from '@/lib/acceso'
 
 export async function POST(request: Request) {
   try {
@@ -27,12 +27,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Evaluación no encontrada' }, { status: 404 })
     }
 
-    const autorizado = await tieneAccesoCurso(supabase, user.id, evaluacion.curso_id, { permitirDocenteAdmin: true })
+    const esDocenteAdmin = await esDocenteOAdminDelCurso(supabase, user.id, evaluacion.curso_id)
+    const autorizado = esDocenteAdmin || await tieneAccesoCurso(supabase, user.id, evaluacion.curso_id)
     if (!autorizado) {
       return NextResponse.json({ error: 'No tienes acceso a este curso' }, { status: 403 })
     }
 
-    if (evaluacion.intentos_permitidos && evaluacion.intentos_permitidos > 0) {
+    if (!esDocenteAdmin && evaluacion.intentos_permitidos && evaluacion.intentos_permitidos > 0) {
       const { count } = await supabase
         .from('resultados_evaluacion')
         .select('id', { count: 'exact', head: true })
@@ -78,17 +79,19 @@ export async function POST(request: Request) {
     const puntaje = Math.round((correctas / total) * 100)
     const aprobado = puntaje >= (evaluacion.nota_minima || 70)
 
-    const { error: insertError } = await supabase.from('resultados_evaluacion').insert({
-      alumno_id: user.id,
-      evaluacion_id: evaluacionId,
-      respuestas,
-      puntaje,
-      aprobado,
-    })
+    if (!esDocenteAdmin) {
+      const { error: insertError } = await supabase.from('resultados_evaluacion').insert({
+        alumno_id: user.id,
+        evaluacion_id: evaluacionId,
+        respuestas,
+        puntaje,
+        aprobado,
+      })
 
-    if (insertError) {
-      console.error('Error al guardar resultado:', insertError)
-      return NextResponse.json({ error: 'Error al guardar el resultado' }, { status: 500 })
+      if (insertError) {
+        console.error('Error al guardar resultado:', insertError)
+        return NextResponse.json({ error: 'Error al guardar el resultado' }, { status: 500 })
+      }
     }
 
     return NextResponse.json({
