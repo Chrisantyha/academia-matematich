@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { createAdminSupabaseClient } from '@/lib/supabase-admin'
 import { getPerfil } from '@/lib/db'
@@ -28,4 +29,5 @@ export async function aprobarCurso(formData: FormData) {
 
   revalidatePath('/admin')
   revalidatePath(`/admin/curso/${cursoId}`)
+  redirect('/admin')
 }
