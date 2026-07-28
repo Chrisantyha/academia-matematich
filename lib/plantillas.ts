@@ -11,11 +11,18 @@ export type TipoPlantilla =
   | 'ecuacion_cuadratica'
   | 'limite_racional_directo'
   | 'limite_indeterminado'
+  | 'derivada_polinomio'
+  | 'derivada_racional'
+  | 'derivada_potencias_negativas'
 
 export interface GeneracionPlantilla {
   preguntaTexto: string
   valoresGenerados: Record<string, number>
-  respuestaCorrecta: string | { x: number; y: number } | { x1: number; x2: number }
+  respuestaCorrecta:
+    | string
+    | { x: number; y: number }
+    | { x1: number; x2: number }
+    | { numerador: string; denominador: string }
   tolerancia: number
 }
 
@@ -618,6 +625,135 @@ function generarLimiteIndeterminado(parametros: Record<string, number>): Generac
   }
 }
 
+function generarDerivadaPolinomio(parametros: Record<string, number>): GeneracionPlantilla {
+  const grado = requerido(parametros, 'grado')
+  if (grado !== 2 && grado !== 3 && grado !== 4) {
+    throw new Error('El parámetro "grado" debe ser 2, 3 o 4')
+  }
+
+  const coefMin = requerido(parametros, 'coef_min')
+  const coefMax = requerido(parametros, 'coef_max')
+
+  // coeficientes[e] = coeficiente del término x^e; el líder no puede ser 0
+  // (si no, el grado real sería menor al pedido)
+  const coeficientes: number[] = new Array(grado + 1).fill(0)
+  coeficientes[grado] = randIntNoCero(coefMin, coefMax)
+  for (let e = grado - 1; e >= 0; e--) {
+    coeficientes[e] = randInt(coefMin, coefMax)
+  }
+
+  const partesPregunta: string[] = [formatoTerminoPotencia(coeficientes[grado], grado)]
+  for (let e = grado - 1; e >= 0; e--) {
+    if (coeficientes[e] === 0) continue
+    partesPregunta.push(formatoSiguientePotencia(coeficientes[e], e))
+  }
+  const preguntaTexto = `Deriva: f(x) = ${partesPregunta.join('')}`
+
+  // regla de potencia término a término: d/dx[a·x^e] = e·a·x^(e-1); el término
+  // independiente (e=0) se anula y no aparece en la derivada
+  const gradoDerivada = grado - 1
+  const derivCoef: number[] = new Array(gradoDerivada + 1).fill(0)
+  for (let e = 1; e <= grado; e++) {
+    derivCoef[e - 1] = e * coeficientes[e]
+  }
+
+  const partesRespuesta: string[] = [formatoTerminoPotencia(derivCoef[gradoDerivada], gradoDerivada)]
+  for (let e = gradoDerivada - 1; e >= 0; e--) {
+    if (derivCoef[e] === 0) continue
+    partesRespuesta.push(formatoSiguientePotencia(derivCoef[e], e))
+  }
+  const respuestaCorrecta = partesRespuesta.join('')
+
+  return {
+    preguntaTexto,
+    valoresGenerados: Object.fromEntries(coeficientes.map((c, e) => [`coef${e}`, c])),
+    respuestaCorrecta,
+    tolerancia: 0,
+  }
+}
+
+function generarDerivadaRacional(parametros: Record<string, number>): GeneracionPlantilla {
+  const aMin = requerido(parametros, 'a_min'), aMax = requerido(parametros, 'a_max')
+  const bMin = requerido(parametros, 'b_min'), bMax = requerido(parametros, 'b_max')
+  const cMin = requerido(parametros, 'c_min'), cMax = requerido(parametros, 'c_max')
+  const dMin = requerido(parametros, 'd_min'), dMax = requerido(parametros, 'd_max')
+
+  // f(x) = (ax+b)/(cx+d) -> f'(x) = [a(cx+d) - c(ax+b)]/(cx+d)² = (ad-bc)/(cx+d)²
+  // (los términos en x se cancelan siempre). Se evita ad-bc=0 (derivada
+  // idénticamente nula, un caso degenerado y confuso como ejercicio) y c=0
+  // (el denominador dejaría de depender de x, no ejercitaría la regla del cociente)
+  let a = 0, b = 0, c = 0, d = 0, k = 0
+  let encontrado = false
+  for (let i = 0; i < 200; i++) {
+    a = randIntNoCero(aMin, aMax)
+    b = randInt(bMin, bMax)
+    c = randIntNoCero(cMin, cMax)
+    d = randInt(dMin, dMax)
+    k = a * d - b * c
+    if (k !== 0) {
+      encontrado = true
+      break
+    }
+  }
+  if (!encontrado) {
+    throw new Error('Parámetros inválidos: no se pudo generar una función racional cuya derivada no se anule (ad - bc ≠ 0)')
+  }
+
+  const terminoB = b === 0 ? '' : formatoSiguiente(b, '')
+  const terminoD = d === 0 ? '' : formatoSiguiente(d, '')
+  const preguntaTexto = `Deriva: f(x) = (${formatoPrimero(a, 'x')}${terminoB})/(${formatoPrimero(c, 'x')}${terminoD})`
+
+  const denominador = `(${formatoPrimero(c, 'x')}${terminoD})²`
+
+  return {
+    preguntaTexto,
+    valoresGenerados: { a, b, c, d, k },
+    respuestaCorrecta: { numerador: String(k), denominador },
+    tolerancia: 0,
+  }
+}
+
+function generarDerivadaPotenciasNegativas(parametros: Record<string, number>): GeneracionPlantilla {
+  const expMin = requerido(parametros, 'exp_min')
+  const expMax = requerido(parametros, 'exp_max')
+  const coefMin = requerido(parametros, 'coef_min')
+  const coefMax = requerido(parametros, 'coef_max')
+
+  let e1 = 0, e2 = 0
+  let encontrado = false
+  for (let i = 0; i < 200; i++) {
+    const exp1 = randInt(expMin, expMax)
+    const exp2 = randInt(expMin, expMax)
+    if (exp1 !== exp2) {
+      e1 = Math.min(exp1, exp2)
+      e2 = Math.max(exp1, exp2)
+      encontrado = true
+      break
+    }
+  }
+  if (!encontrado) {
+    throw new Error('Parámetros inválidos: no se pudieron generar dos exponentes distintos')
+  }
+
+  const c1 = randIntNoCero(coefMin, coefMax)
+  const c2 = randIntNoCero(coefMin, coefMax)
+
+  const preguntaTexto = `Deriva: f(x) = ${formatoTerminoPotencia(c1, e1)}${formatoSiguientePotencia(c2, e2)}`
+
+  // misma regla de potencia que con exponentes positivos: d/dx[c·x^e] = e·c·x^(e-1).
+  // e1 != e2 garantiza e1-1 != e2-1, así que los términos derivados no colapsan
+  const d1 = e1 * c1
+  const d2 = e2 * c2
+  const respuestaCorrecta = `${formatoTerminoPotencia(d1, e1 - 1)}${formatoSiguientePotencia(d2, e2 - 1)}`
+
+  return {
+    preguntaTexto,
+    valoresGenerados: { c1, c2, e1, e2 },
+    respuestaCorrecta,
+    tolerancia: 0,
+  }
+}
+
 function generarReglaDeTres(parametros: Record<string, number>): GeneracionPlantilla {
   const a = randIntPositivo(requerido(parametros, 'a_min'), requerido(parametros, 'a_max'))
   const k = randIntPositivo(requerido(parametros, 'k_min'), requerido(parametros, 'k_max'))
@@ -653,6 +789,9 @@ export function generarPlantilla(
     case 'ecuacion_cuadratica': return generarEcuacionCuadratica(parametros)
     case 'limite_racional_directo': return generarLimiteRacionalDirecto(parametros)
     case 'limite_indeterminado': return generarLimiteIndeterminado(parametros)
+    case 'derivada_polinomio': return generarDerivadaPolinomio(parametros)
+    case 'derivada_racional': return generarDerivadaRacional(parametros)
+    case 'derivada_potencias_negativas': return generarDerivadaPotenciasNegativas(parametros)
     default:
       throw new Error(`Tipo de plantilla desconocido: ${tipo}`)
   }

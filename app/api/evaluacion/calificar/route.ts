@@ -7,7 +7,11 @@ import { normalizarTextoAlgebraico, normalizarRadical } from '@/lib/plantillas'
 interface PreguntaSnapshot {
   pregunta_id: string
   tipo: string
-  respuesta_correcta: string | { x: number; y: number } | { x1: number; x2: number }
+  respuesta_correcta:
+    | string
+    | { x: number; y: number }
+    | { x1: number; x2: number }
+    | { numerador: string; denominador: string }
   tolerancia: number
 }
 
@@ -94,6 +98,17 @@ export async function POST(request: Request) {
       } else if (p.tipo === 'radical') {
         if (respuestaAlumno === '') continue
         if (normalizarRadical(String(respuestaAlumno)) === normalizarRadical(String(p.respuesta_correcta))) {
+          correctas++
+        }
+      } else if (p.tipo === 'fraccion_algebraica') {
+        const correctaFraccion = p.respuesta_correcta as { numerador: string; denominador: string }
+        const respNumerador = respuestaAlumno?.numerador
+        const respDenominador = respuestaAlumno?.denominador
+        if (
+          respNumerador && respDenominador &&
+          normalizarTextoAlgebraico(String(respNumerador)) === normalizarTextoAlgebraico(String(correctaFraccion.numerador)) &&
+          normalizarTextoAlgebraico(String(respDenominador)) === normalizarTextoAlgebraico(String(correctaFraccion.denominador))
+        ) {
           correctas++
         }
       } else if (p.tipo === 'raices_cuadratica') {

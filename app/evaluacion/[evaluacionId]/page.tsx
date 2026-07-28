@@ -22,6 +22,7 @@ interface Evaluacion {
 
 type RespuestaPar = { x: string; y: string }
 type RespuestaRaices = { x1: string; x2: string }
+type RespuestaFraccion = { numerador: string; denominador: string }
 
 export default function EvaluacionPage() {
   const params = useParams()
@@ -29,7 +30,7 @@ export default function EvaluacionPage() {
 
   const [evaluacion, setEvaluacion] = useState<Evaluacion | null>(null)
   const [preguntas, setPreguntas] = useState<Pregunta[]>([])
-  const [respuestas, setRespuestas] = useState<Record<string, string | RespuestaPar | RespuestaRaices>>({})
+  const [respuestas, setRespuestas] = useState<Record<string, string | RespuestaPar | RespuestaRaices | RespuestaFraccion>>({})
   const [loading, setLoading] = useState(true)
   const [intentoId, setIntentoId] = useState<string | null>(null)
   const [esDocenteAdmin, setEsDocenteAdmin] = useState(false)
@@ -86,6 +87,11 @@ export default function EvaluacionPage() {
   function responderRaices(preguntaId: string, cual: 'x1' | 'x2', valor: string) {
     const actual = (respuestas[preguntaId] as RespuestaRaices | undefined) || { x1: '', x2: '' }
     setRespuestas({ ...respuestas, [preguntaId]: { ...actual, [cual]: valor } })
+  }
+
+  function responderFraccion(preguntaId: string, campo: 'numerador' | 'denominador', valor: string) {
+    const actual = (respuestas[preguntaId] as RespuestaFraccion | undefined) || { numerador: '', denominador: '' }
+    setRespuestas({ ...respuestas, [preguntaId]: { ...actual, [campo]: valor } })
   }
 
   async function enviarEvaluacion() {
@@ -285,9 +291,10 @@ export default function EvaluacionPage() {
             {pregunta.tipo === 'verdadero_falso' && 'Verdadero o Falso'}
             {pregunta.tipo === 'numerica' && 'Respuesta numérica'}
             {pregunta.tipo === 'par_numerico' && 'Sistema de ecuaciones'}
-            {pregunta.tipo === 'texto_algebraico' && 'Factorización'}
+            {pregunta.tipo === 'texto_algebraico' && 'Respuesta algebraica'}
             {pregunta.tipo === 'radical' && 'Respuesta en forma radical'}
             {pregunta.tipo === 'raices_cuadratica' && 'Ecuación cuadrática'}
+            {pregunta.tipo === 'fraccion_algebraica' && 'Derivada (regla del cociente)'}
           </div>
 
           <div className="text-lg font-semibold mb-6 leading-relaxed whitespace-pre-line">
@@ -389,9 +396,34 @@ export default function EvaluacionPage() {
               type="text"
               value={(respuestas[pregunta.id] as string) || ''}
               onChange={(e) => responder(pregunta.id, e.target.value)}
-              placeholder="Ej: (x+3)(x+2)"
+              placeholder="Ej: (x+3)(x+2) o 4x^2+6x-5"
               className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-yellow-500 transition-colors text-lg"
             />
+          )}
+
+          {pregunta.tipo === 'fraccion_algebraica' && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-slate-400 text-xs mb-1 block">Numerador</label>
+                <input
+                  type="text"
+                  value={(respuestas[pregunta.id] as RespuestaFraccion | undefined)?.numerador || ''}
+                  onChange={(e) => responderFraccion(pregunta.id, 'numerador', e.target.value)}
+                  placeholder="Ej: -14"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-yellow-500 transition-colors text-lg"
+                />
+              </div>
+              <div>
+                <label className="text-slate-400 text-xs mb-1 block">Denominador</label>
+                <input
+                  type="text"
+                  value={(respuestas[pregunta.id] as RespuestaFraccion | undefined)?.denominador || ''}
+                  onChange={(e) => responderFraccion(pregunta.id, 'denominador', e.target.value)}
+                  placeholder="Ej: (2x+3)^2"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-yellow-500 transition-colors text-lg"
+                />
+              </div>
+            </div>
           )}
 
           {pregunta.tipo === 'radical' && (
