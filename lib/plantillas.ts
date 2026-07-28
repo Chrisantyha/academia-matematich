@@ -14,6 +14,10 @@ export type TipoPlantilla =
   | 'derivada_polinomio'
   | 'derivada_racional'
   | 'derivada_potencias_negativas'
+  | 'trig_identidad'
+  | 'trig_ecuacion_simple'
+  | 'trig_razones_triangulo'
+  | 'limite_raiz'
 
 export interface GeneracionPlantilla {
   preguntaTexto: string
@@ -754,6 +758,274 @@ function generarDerivadaPotenciasNegativas(parametros: Record<string, number>): 
   }
 }
 
+// ---------- ternas pitagóricas (compartidas por trig_identidad y trig_razones_triangulo) ----------
+
+const TERNAS_PITAGORICAS_PRIMITIVAS: [number, number, number][] = [
+  [3, 4, 5],
+  [5, 12, 13],
+  [8, 15, 17],
+  [7, 24, 25],
+  [20, 21, 29],
+  [9, 40, 41],
+  [12, 35, 37],
+]
+
+interface TernaPitagorica {
+  a: number
+  b: number
+  c: number
+}
+
+// terna primitiva escalada por un entero (preserva a²+b²=c²)
+function generarTernaPitagorica(escalaMax: number): TernaPitagorica {
+  const [a, b, c] = TERNAS_PITAGORICAS_PRIMITIVAS[randInt(0, TERNAS_PITAGORICAS_PRIMITIVAS.length - 1)]
+  const escala = randInt(1, Math.max(1, escalaMax))
+  return { a: a * escala, b: b * escala, c: c * escala }
+}
+
+// devuelve (opuesto, adyacente, hipotenusa) para un ángulo elegido al azar entre
+// los dos vértices agudos de la terna
+function catetosAlAzar(terna: TernaPitagorica): { op: number; ady: number; hip: number } {
+  const invertir = Math.random() < 0.5
+  return {
+    op: invertir ? terna.b : terna.a,
+    ady: invertir ? terna.a : terna.b,
+    hip: terna.c,
+  }
+}
+
+// ---------- trig_identidad ----------
+
+type VarianteTrigIdentidad =
+  | 'pitagorica_sencos'
+  | 'pitagorica_tansec'
+  | 'pitagorica_cotcsc'
+  | 'angulo_doble_sen'
+  | 'angulo_doble_cos'
+  | 'suma_sen'
+
+const VARIANTES_TRIG_IDENTIDAD: VarianteTrigIdentidad[] = [
+  'pitagorica_sencos', 'pitagorica_tansec', 'pitagorica_cotcsc',
+  'angulo_doble_sen', 'angulo_doble_cos', 'suma_sen',
+]
+
+function generarTrigIdentidad(parametros: Record<string, number>): GeneracionPlantilla {
+  const kMin = requerido(parametros, 'k_min')
+  const kMax = requerido(parametros, 'k_max')
+  const escalaMax = requerido(parametros, 'escala_max')
+
+  const variante = VARIANTES_TRIG_IDENTIDAD[randInt(0, VARIANTES_TRIG_IDENTIDAD.length - 1)]
+
+  // identidades pitagóricas: k·(identidad) = k, sin depender de x
+  if (variante === 'pitagorica_sencos' || variante === 'pitagorica_tansec' || variante === 'pitagorica_cotcsc') {
+    const k = randIntNoCero(kMin, kMax)
+    const factorTexto = k === 1 ? '' : k === -1 ? '-' : String(k)
+    const identidadTexto =
+      variante === 'pitagorica_sencos' ? 'sen²(x) + cos²(x)'
+        : variante === 'pitagorica_tansec' ? 'sec²(x) - tan²(x)'
+          : 'csc²(x) - cot²(x)'
+    const preguntaTexto = `Simplifica usando identidades trigonométricas: ${factorTexto}(${identidadTexto})`
+
+    return {
+      preguntaTexto,
+      valoresGenerados: { k },
+      respuestaCorrecta: String(k),
+      tolerancia: 0,
+    }
+  }
+
+  // ángulo doble: sen(x) y cos(x) dados como razones exactas de una terna pitagórica
+  if (variante === 'angulo_doble_sen' || variante === 'angulo_doble_cos') {
+    const { op: p, ady: q, hip: r } = catetosAlAzar(generarTernaPitagorica(escalaMax))
+
+    const preguntaTexto =
+      variante === 'angulo_doble_sen'
+        ? `Sabiendo que sen(x) = ${p}/${r} y cos(x) = ${q}/${r}, calcula sen(2x) usando la identidad del ángulo doble.`
+        : `Sabiendo que sen(x) = ${p}/${r} y cos(x) = ${q}/${r}, calcula cos(2x) usando la identidad del ángulo doble.`
+
+    const resultado =
+      variante === 'angulo_doble_sen'
+        ? reducirFraccion(2 * p * q, r * r)
+        : reducirFraccion(q * q - p * p, r * r)
+
+    return {
+      preguntaTexto,
+      valoresGenerados: { p, q, r },
+      respuestaCorrecta: formatoFraccionSimple(resultado),
+      tolerancia: 0.001,
+    }
+  }
+
+  // suma de ángulos: dos ternas independientes, una por cada ángulo
+  const t1 = catetosAlAzar(generarTernaPitagorica(escalaMax))
+  const t2 = catetosAlAzar(generarTernaPitagorica(escalaMax))
+
+  const preguntaTexto = `Sabiendo que sen(a) = ${t1.op}/${t1.hip}, cos(a) = ${t1.ady}/${t1.hip}, sen(b) = ${t2.op}/${t2.hip} y cos(b) = ${t2.ady}/${t2.hip}, calcula sen(a+b) usando la identidad de la suma de ángulos.`
+
+  const resultado = reducirFraccion(t1.op * t2.ady + t1.ady * t2.op, t1.hip * t2.hip)
+
+  return {
+    preguntaTexto,
+    valoresGenerados: { p1: t1.op, q1: t1.ady, r1: t1.hip, p2: t2.op, q2: t2.ady, r2: t2.hip },
+    respuestaCorrecta: formatoFraccionSimple(resultado),
+    tolerancia: 0.001,
+  }
+}
+
+// ---------- trig_ecuacion_simple ----------
+
+// valor exacto = n·√r/d (r=1 => valor racional, sin símbolo de raíz); null = función indefinida
+interface ValorExacto { n: number; r: number; d: number }
+interface FilaAnguloConocido {
+  grados: number
+  sen: ValorExacto
+  cos: ValorExacto
+  tan: ValorExacto | null
+}
+
+const TABLA_ANGULOS_CONOCIDOS: FilaAnguloConocido[] = [
+  { grados: 0, sen: { n: 0, r: 1, d: 1 }, cos: { n: 1, r: 1, d: 1 }, tan: { n: 0, r: 1, d: 1 } },
+  { grados: 30, sen: { n: 1, r: 1, d: 2 }, cos: { n: 1, r: 3, d: 2 }, tan: { n: 1, r: 3, d: 3 } },
+  { grados: 45, sen: { n: 1, r: 2, d: 2 }, cos: { n: 1, r: 2, d: 2 }, tan: { n: 1, r: 1, d: 1 } },
+  { grados: 60, sen: { n: 1, r: 3, d: 2 }, cos: { n: 1, r: 1, d: 2 }, tan: { n: 1, r: 3, d: 1 } },
+  { grados: 90, sen: { n: 1, r: 1, d: 1 }, cos: { n: 0, r: 1, d: 1 }, tan: null },
+  { grados: 120, sen: { n: 1, r: 3, d: 2 }, cos: { n: -1, r: 1, d: 2 }, tan: { n: -1, r: 3, d: 1 } },
+  { grados: 135, sen: { n: 1, r: 2, d: 2 }, cos: { n: -1, r: 2, d: 2 }, tan: { n: -1, r: 1, d: 1 } },
+  { grados: 150, sen: { n: 1, r: 1, d: 2 }, cos: { n: -1, r: 3, d: 2 }, tan: { n: -1, r: 3, d: 3 } },
+  { grados: 180, sen: { n: 0, r: 1, d: 1 }, cos: { n: -1, r: 1, d: 1 }, tan: { n: 0, r: 1, d: 1 } },
+  { grados: 210, sen: { n: -1, r: 1, d: 2 }, cos: { n: -1, r: 3, d: 2 }, tan: { n: 1, r: 3, d: 3 } },
+  { grados: 225, sen: { n: -1, r: 2, d: 2 }, cos: { n: -1, r: 2, d: 2 }, tan: { n: 1, r: 1, d: 1 } },
+  { grados: 240, sen: { n: -1, r: 3, d: 2 }, cos: { n: -1, r: 1, d: 2 }, tan: { n: 1, r: 3, d: 1 } },
+  { grados: 270, sen: { n: -1, r: 1, d: 1 }, cos: { n: 0, r: 1, d: 1 }, tan: null },
+  { grados: 300, sen: { n: -1, r: 3, d: 2 }, cos: { n: 1, r: 1, d: 2 }, tan: { n: -1, r: 3, d: 1 } },
+  { grados: 315, sen: { n: -1, r: 2, d: 2 }, cos: { n: 1, r: 2, d: 2 }, tan: { n: -1, r: 1, d: 1 } },
+  { grados: 330, sen: { n: -1, r: 1, d: 2 }, cos: { n: 1, r: 3, d: 2 }, tan: { n: -1, r: 3, d: 3 } },
+]
+
+// intervalo del cuadrante (cerrado) que contiene a `grados`; garantiza solución
+// única porque sen/cos/tan son monótonas dentro de cada cuadrante cerrado
+function cuadranteDe(grados: number): [number, number] {
+  if (grados <= 90) return [0, 90]
+  if (grados <= 180) return [90, 180]
+  if (grados <= 270) return [180, 270]
+  return [270, 360]
+}
+
+function generarTrigEcuacionSimple(parametros: Record<string, number>): GeneracionPlantilla {
+  const tMax = requerido(parametros, 't_max')
+
+  const funciones = ['sen', 'cos', 'tan'] as const
+  const funcion = funciones[randInt(0, funciones.length - 1)]
+
+  // se excluyen los ángulos donde la función vale 0 (ecuación trivial, cualquier
+  // coeficiente la resuelve) y donde tan(x) es indefinida
+  const candidatos = TABLA_ANGULOS_CONOCIDOS.filter((fila) => {
+    const valor = fila[funcion]
+    return valor !== null && valor.n !== 0
+  })
+  if (candidatos.length === 0) {
+    throw new Error('Parámetros inválidos: no hay ángulos candidatos para la función elegida')
+  }
+  const fila = candidatos[randInt(0, candidatos.length - 1)]
+  const valorExacto = fila[funcion] as ValorExacto
+
+  const t = randIntPositivo(1, tMax)
+  const k = t * valorExacto.d
+  const m = t * valorExacto.n
+
+  const rhsTexto = valorExacto.r === 1 ? String(m) : formatoRadical(m, valorExacto.r)
+  const lhsTexto = formatoPrimero(k, `${funcion}(x)`)
+
+  const [lo, hi] = cuadranteDe(fila.grados)
+  const preguntaTexto = `Resuelve para x ∈ [${lo}°, ${hi}°]: ${lhsTexto} = ${rhsTexto}`
+
+  return {
+    preguntaTexto,
+    valoresGenerados: { grados: fila.grados, k, m, radicando: valorExacto.r },
+    respuestaCorrecta: String(fila.grados),
+    tolerancia: 0,
+  }
+}
+
+// ---------- trig_razones_triangulo ----------
+
+function generarTrigRazonesTriangulo(parametros: Record<string, number>): GeneracionPlantilla {
+  const escalaMax = requerido(parametros, 'escala_max')
+  const { op, ady, hip } = catetosAlAzar(generarTernaPitagorica(escalaMax))
+
+  // se revelan solo 2 de los 3 lados; el alumno debe derivar el tercero con
+  // Pitágoras (garantizado entero por venir de una terna pitagórica real)
+  const tipoCombo = randInt(0, 2)
+  let ladosTexto: string
+  let anguloTexto: string
+  if (tipoCombo === 0) {
+    ladosTexto = `los catetos miden ${op} y ${ady}`
+    anguloTexto = `el ángulo θ es el opuesto al cateto de longitud ${op}`
+  } else if (tipoCombo === 1) {
+    ladosTexto = `un cateto mide ${op} y la hipotenusa mide ${hip}`
+    anguloTexto = `el ángulo θ es el opuesto al cateto de longitud ${op}`
+  } else {
+    ladosTexto = `un cateto mide ${ady} y la hipotenusa mide ${hip}`
+    anguloTexto = `el ángulo θ es el adyacente al cateto de longitud ${ady}`
+  }
+
+  const razones = ['sen', 'cos', 'tan'] as const
+  const razon = razones[randInt(0, razones.length - 1)]
+  let numerador: number, denominador: number
+  if (razon === 'sen') { numerador = op; denominador = hip }
+  else if (razon === 'cos') { numerador = ady; denominador = hip }
+  else { numerador = op; denominador = ady }
+
+  const preguntaTexto = `En un triángulo rectángulo, ${ladosTexto}; ${anguloTexto}. Calcula ${razon}(θ).`
+
+  const resultado = reducirFraccion(numerador, denominador)
+
+  return {
+    preguntaTexto,
+    valoresGenerados: { op, ady, hip },
+    respuestaCorrecta: formatoFraccionSimple(resultado),
+    tolerancia: 0.001,
+  }
+}
+
+// ---------- limite_raiz ----------
+
+function generarLimiteRaiz(parametros: Record<string, number>): GeneracionPlantilla {
+  const pMin = requerido(parametros, 'p_min'), pMax = requerido(parametros, 'p_max')
+  const kMin = requerido(parametros, 'k_min'), kMax = requerido(parametros, 'k_max')
+  const aMin = requerido(parametros, 'a_min'), aMax = requerido(parametros, 'a_max')
+
+  const indice = Math.random() < 0.5 ? 2 : 3
+
+  const a = randInt(aMin, aMax)
+  const p = randIntNoCero(pMin, pMax)
+  // índice 2 exige raíz principal (k debe ser positivo); índice 3 admite k
+  // negativo porque la raíz cúbica real está definida para negativos también
+  const k = indice === 2 ? randIntPositivo(kMin, kMax) : randIntNoCero(kMin, kMax)
+
+  // lim(x→a) (ⁿ√(px+q) - k)/(x-a) = p/(n·k^(n-1)), eligiendo q = k^n - p·a
+  // para que ⁿ√(pa+q) = k exactamente (sin decimales)
+  const kElevadoN = indice === 2 ? k * k : k * k * k
+  const q = kElevadoN - p * a
+  const denominadorLimite = indice === 2 ? k : k * k
+
+  const simboloRaiz = indice === 2 ? '√' : '∛'
+  const terminoQ = q === 0 ? '' : formatoSiguiente(q, '')
+  const expresionRadical = `${simboloRaiz}(${formatoPrimero(p, 'x')}${terminoQ})`
+  const terminoK = formatoSiguiente(-k, '')
+
+  const preguntaTexto = `Calcula: lim(x→${a}) (${expresionRadical}${terminoK}) / (x - ${a})`
+
+  const resultado = reducirFraccion(p, indice * denominadorLimite)
+
+  return {
+    preguntaTexto,
+    valoresGenerados: { indice, a, p, q, k },
+    respuestaCorrecta: formatoFraccionSimple(resultado),
+    tolerancia: 0.001,
+  }
+}
+
 function generarReglaDeTres(parametros: Record<string, number>): GeneracionPlantilla {
   const a = randIntPositivo(requerido(parametros, 'a_min'), requerido(parametros, 'a_max'))
   const k = randIntPositivo(requerido(parametros, 'k_min'), requerido(parametros, 'k_max'))
@@ -792,6 +1064,10 @@ export function generarPlantilla(
     case 'derivada_polinomio': return generarDerivadaPolinomio(parametros)
     case 'derivada_racional': return generarDerivadaRacional(parametros)
     case 'derivada_potencias_negativas': return generarDerivadaPotenciasNegativas(parametros)
+    case 'trig_identidad': return generarTrigIdentidad(parametros)
+    case 'trig_ecuacion_simple': return generarTrigEcuacionSimple(parametros)
+    case 'trig_razones_triangulo': return generarTrigRazonesTriangulo(parametros)
+    case 'limite_raiz': return generarLimiteRaiz(parametros)
     default:
       throw new Error(`Tipo de plantilla desconocido: ${tipo}`)
   }

@@ -40,6 +40,10 @@ const TIPO_SEGUN_PLANTILLA: Record<TipoPlantilla, TipoRespuesta> = {
   derivada_polinomio: 'texto_algebraico',
   derivada_racional: 'fraccion_algebraica',
   derivada_potencias_negativas: 'texto_algebraico',
+  trig_identidad: 'numerica',
+  trig_ecuacion_simple: 'numerica',
+  trig_razones_triangulo: 'numerica',
+  limite_raiz: 'numerica',
 }
 
 const LABEL_TIPO_RESPUESTA: Record<TipoRespuesta, string> = {
@@ -67,6 +71,10 @@ const DEFAULTS_PARAMETROS: Record<TipoPlantilla, Record<string, number>> = {
   derivada_polinomio: { grado: 3, coef_min: -8, coef_max: 8 },
   derivada_racional: { a_min: 1, a_max: 8, b_min: -8, b_max: 8, c_min: 1, c_max: 8, d_min: -8, d_max: 8 },
   derivada_potencias_negativas: { exp_min: -5, exp_max: -1, coef_min: -10, coef_max: 10 },
+  trig_identidad: { k_min: -8, k_max: 8, escala_max: 3 },
+  trig_ecuacion_simple: { t_max: 3 },
+  trig_razones_triangulo: { escala_max: 3 },
+  limite_raiz: { p_min: -6, p_max: 6, k_min: 1, k_max: 8, a_min: -10, a_max: 10 },
 }
 
 const CAMPOS_PARAMETROS: Record<TipoPlantilla, { clave: string; label: string }[]> = {
@@ -142,6 +150,21 @@ const CAMPOS_PARAMETROS: Record<TipoPlantilla, { clave: string; label: string }[
   derivada_potencias_negativas: [
     { clave: 'exp_min', label: 'Exponente mínimo (negativo)' }, { clave: 'exp_max', label: 'Exponente máximo (negativo)' },
     { clave: 'coef_min', label: 'Coeficiente mínimo' }, { clave: 'coef_max', label: 'Coeficiente máximo' },
+  ],
+  trig_identidad: [
+    { clave: 'k_min', label: 'Factor/coeficiente mínimo' }, { clave: 'k_max', label: 'Factor/coeficiente máximo' },
+    { clave: 'escala_max', label: 'Factor de escala máximo de la terna (1 = primitiva)' },
+  ],
+  trig_ecuacion_simple: [
+    { clave: 't_max', label: 'Multiplicador máximo del coeficiente' },
+  ],
+  trig_razones_triangulo: [
+    { clave: 'escala_max', label: 'Factor de escala máximo de la terna (1 = primitiva)' },
+  ],
+  limite_raiz: [
+    { clave: 'p_min', label: 'Coeficiente p mínimo' }, { clave: 'p_max', label: 'Coeficiente p máximo' },
+    { clave: 'k_min', label: 'k mínimo (raíz exacta resultante)' }, { clave: 'k_max', label: 'k máximo (raíz exacta resultante)' },
+    { clave: 'a_min', label: 'Punto a mínimo' }, { clave: 'a_max', label: 'Punto a máximo' },
   ],
 }
 
@@ -742,6 +765,10 @@ export default function CrearEvaluacionPage() {
                     <option value="derivada_polinomio">Derivada de polinomio (grado 2 a 4)</option>
                     <option value="derivada_racional">Derivada racional (regla del cociente)</option>
                     <option value="derivada_potencias_negativas">Derivada con exponentes negativos</option>
+                    <option value="trig_identidad">Identidad trigonométrica</option>
+                    <option value="trig_ecuacion_simple">Ecuación trigonométrica simple</option>
+                    <option value="trig_razones_triangulo">Razones trigonométricas en triángulo rectángulo</option>
+                    <option value="limite_raiz">Límite con raíz (racionalización)</option>
                   </select>
 
                   {p.tipo_plantilla && (
