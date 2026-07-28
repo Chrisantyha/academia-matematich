@@ -2,16 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
-import { createClient } from '@/lib/supabase'
 import TextoMath from '@/components/ui/TextoMath'
 import Link from 'next/link'
-import { tieneAccesoCurso } from '@/lib/acceso'
 
 interface Pregunta {
   id: string
   tipo: string
   pregunta: string
-  opciones: string[]
+  opciones: string[] | null
   tolerancia: number
   orden: number
 }
@@ -19,24 +17,25 @@ interface Pregunta {
 interface Evaluacion {
   id: string
   titulo: string
-  nota_minima: number
-  intentos_permitidos: number
   curso_id: string
 }
+
+type RespuestaPar = { x: string; y: string }
 
 export default function EvaluacionPage() {
   const params = useParams()
   const evaluacionId = params.evaluacionId as string
-  const supabase = createClient()
 
   const [evaluacion, setEvaluacion] = useState<Evaluacion | null>(null)
   const [preguntas, setPreguntas] = useState<Pregunta[]>([])
-  const [respuestas, setRespuestas] = useState<Record<string, string>>({})
+  const [respuestas, setRespuestas] = useState<Record<string, string | RespuestaPar>>({})
   const [loading, setLoading] = useState(true)
-  const [acceso, setAcceso] = useState<'verificando' | 'permitido' | 'denegado'>('verificando')
+  const [intentoId, setIntentoId] = useState<string | null>(null)
+  const [acceso, setAcceso] = useState<'verificando' | 'permitido' | 'denegado' | 'sin_intentos'>('verificando')
+  const [mensajeAcceso, setMensajeAcceso] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [errorEnvio, setErrorEnvio] = useState('')
-  const [resultado, setResultado] = useState<{ puntaje: number; aprobado: boolean; correctas: number; total: number } | null>(null)
+  const [resultado, setResultado] = useState<{ puntaje: number; aprobado: boolean; correctas: number; total: number; notaMinima: number } | null>(null)
   const [preguntaActual, setPreguntaActual] = useState(0)
 
   useEffect(() => {
@@ -44,49 +43,41 @@ export default function EvaluacionPage() {
   }, [])
 
   async function cargarEvaluacion() {
-    const { data: { user } } = await supabase.auth.getUser()
+    setLoading(true)
+    try {
+      const response = await fetch('/api/evaluacion/iniciar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ evaluacionId }),
+      })
+      const data = await response.json()
 
-    if (!user) {
+      if (!data.ok) {
+        setEvaluacion(data.cursoId ? { id: evaluacionId, titulo: '', curso_id: data.cursoId } : null)
+        setMensajeAcceso(data.error || '')
+        setAcceso(data.motivo === 'sin_intentos' ? 'sin_intentos' : 'denegado')
+        setLoading(false)
+        return
+      }
+
+      setEvaluacion(data.evaluacion)
+      setPreguntas(data.preguntas || [])
+      setIntentoId(data.intentoId)
+      setAcceso('permitido')
+      setLoading(false)
+    } catch (err) {
       setAcceso('denegado')
       setLoading(false)
-      return
     }
-
-    const { data: evalData } = await supabase
-      .from('evaluaciones')
-      .select('id, titulo, nota_minima, intentos_permitidos, curso_id')
-      .eq('id', evaluacionId)
-      .single()
-
-    if (!evalData) {
-      setAcceso('denegado')
-      setLoading(false)
-      return
-    }
-
-    const autorizado = await tieneAccesoCurso(supabase, user.id, evalData.curso_id, { permitirDocenteAdmin: true })
-
-    if (!autorizado) {
-      setEvaluacion(evalData)
-      setAcceso('denegado')
-      setLoading(false)
-      return
-    }
-
-    const { data: pregData } = await supabase
-      .from('preguntas')
-      .select('id, tipo, pregunta, opciones, tolerancia, orden')
-      .eq('evaluacion_id', evaluacionId)
-      .order('orden', { ascending: true })
-
-    setEvaluacion(evalData)
-    setPreguntas(pregData || [])
-    setAcceso('permitido')
-    setLoading(false)
   }
 
   function responder(preguntaId: string, respuesta: string) {
     setRespuestas({ ...respuestas, [preguntaId]: respuesta })
+  }
+
+  function responderPar(preguntaId: string, eje: 'x' | 'y', valor: string) {
+    const actual = (respuestas[preguntaId] as RespuestaPar | undefined) || { x: '', y: '' }
+    setRespuestas({ ...respuestas, [preguntaId]: { ...actual, [eje]: valor } })
   }
 
   async function enviarEvaluacion() {
@@ -102,7 +93,7 @@ export default function EvaluacionPage() {
       const response = await fetch('/api/evaluacion/calificar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ evaluacionId, respuestas }),
+        body: JSON.stringify({ intentoId, respuestas }),
       })
 
       const data = await response.json()
@@ -118,6 +109,7 @@ export default function EvaluacionPage() {
         aprobado: data.aprobado,
         correctas: data.correctas,
         total: data.total,
+        notaMinima: data.notaMinima,
       })
     } catch (err) {
       setErrorEnvio('Error de conexión. Intenta de nuevo.')
@@ -152,6 +144,22 @@ export default function EvaluacionPage() {
     )
   }
 
+  if (acceso === 'sin_intentos') {
+    return (
+      <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center px-4">
+        <div className="max-w-md w-full text-center">
+          <p className="text-slate-400 mb-6">{mensajeAcceso}</p>
+          <Link
+            href={evaluacion ? `/cursos/${evaluacion.curso_id}` : '/cursos'}
+            className="text-yellow-500 font-semibold hover:text-yellow-400"
+          >
+            Volver al curso
+          </Link>
+        </div>
+      </main>
+    )
+  }
+
   if (resultado) {
     return (
       <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center px-4">
@@ -165,7 +173,7 @@ export default function EvaluacionPage() {
           <p className="text-slate-400 mb-8">
             {resultado.aprobado
               ? 'Excelente trabajo. Puedes continuar al siguiente módulo.'
-              : `Necesitas ${evaluacion?.nota_minima}% para aprobar. Intenta de nuevo.`}
+              : `Necesitas ${resultado.notaMinima}% para aprobar. Intenta de nuevo.`}
           </p>
 
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 mb-8">
@@ -184,7 +192,7 @@ export default function EvaluacionPage() {
             </div>
 
             <div className="mt-4 text-xs text-slate-500">
-              Nota mínima: {evaluacion?.nota_minima}%
+              Nota mínima: {resultado.notaMinima}%
             </div>
           </div>
 
@@ -202,6 +210,7 @@ export default function EvaluacionPage() {
                   setResultado(null)
                   setRespuestas({})
                   setPreguntaActual(0)
+                  cargarEvaluacion()
                 }}
                 className="bg-yellow-500 text-black font-bold px-8 py-3 rounded-xl hover:bg-yellow-400 transition-colors"
               >
@@ -254,15 +263,17 @@ export default function EvaluacionPage() {
             {pregunta.tipo === 'opcion_multiple' && 'Opción múltiple'}
             {pregunta.tipo === 'verdadero_falso' && 'Verdadero o Falso'}
             {pregunta.tipo === 'numerica' && 'Respuesta numérica'}
+            {pregunta.tipo === 'par_numerico' && 'Sistema de ecuaciones'}
+            {pregunta.tipo === 'texto_algebraico' && 'Factorización'}
           </div>
 
-          <div className="text-lg font-semibold mb-6 leading-relaxed">
+          <div className="text-lg font-semibold mb-6 leading-relaxed whitespace-pre-line">
             <TextoMath texto={pregunta.pregunta} />
           </div>
 
           {pregunta.tipo === 'opcion_multiple' && (
             <div className="space-y-3">
-              {pregunta.opciones.map((opcion, index) => {
+              {(pregunta.opciones || []).map((opcion, index) => {
                 const letra = String.fromCharCode(65 + index)
                 const seleccionada = respuestas[pregunta.id] === letra
                 return (
@@ -311,12 +322,11 @@ export default function EvaluacionPage() {
           {pregunta.tipo === 'numerica' && (
             <div>
               <input
-                type="number"
-                value={respuestas[pregunta.id] || ''}
+                type="text"
+                value={(respuestas[pregunta.id] as string) || ''}
                 onChange={(e) => responder(pregunta.id, e.target.value)}
-                placeholder="Escribe tu respuesta numérica"
+                placeholder="Escribe tu respuesta (ej: 0.4 o 2/5)"
                 className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-yellow-500 transition-colors text-lg"
-                step="any"
               />
               {pregunta.tolerancia > 0 && (
                 <p className="text-slate-500 text-xs mt-2">
@@ -324,6 +334,41 @@ export default function EvaluacionPage() {
                 </p>
               )}
             </div>
+          )}
+
+          {pregunta.tipo === 'par_numerico' && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-slate-400 text-xs mb-1 block">x =</label>
+                <input
+                  type="text"
+                  value={(respuestas[pregunta.id] as RespuestaPar | undefined)?.x || ''}
+                  onChange={(e) => responderPar(pregunta.id, 'x', e.target.value)}
+                  placeholder="Ej: 3 o 6/2"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-yellow-500 transition-colors text-lg"
+                />
+              </div>
+              <div>
+                <label className="text-slate-400 text-xs mb-1 block">y =</label>
+                <input
+                  type="text"
+                  value={(respuestas[pregunta.id] as RespuestaPar | undefined)?.y || ''}
+                  onChange={(e) => responderPar(pregunta.id, 'y', e.target.value)}
+                  placeholder="Ej: -2 o 4/2"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-yellow-500 transition-colors text-lg"
+                />
+              </div>
+            </div>
+          )}
+
+          {pregunta.tipo === 'texto_algebraico' && (
+            <input
+              type="text"
+              value={(respuestas[pregunta.id] as string) || ''}
+              onChange={(e) => responder(pregunta.id, e.target.value)}
+              placeholder="Ej: (x+3)(x+2)"
+              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-yellow-500 transition-colors text-lg"
+            />
           )}
         </div>
 

@@ -1,6 +1,15 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { tieneAccesoCurso, esDocenteOAdminDelCurso } from '@/lib/acceso'
+import { esDocenteOAdminDelCurso } from '@/lib/acceso'
+import { parseNumeroOFraccion } from '@/lib/numero'
+import { normalizarTextoAlgebraico } from '@/lib/plantillas'
+
+interface PreguntaSnapshot {
+  pregunta_id: string
+  tipo: string
+  respuesta_correcta: string | { x: number; y: number }
+  tolerancia: number
+}
 
 export async function POST(request: Request) {
   try {
@@ -11,16 +20,40 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
-    const { evaluacionId, respuestas } = await request.json()
+    const { intentoId, respuestas } = await request.json()
 
-    if (!evaluacionId || !respuestas) {
+    if (!intentoId || !respuestas) {
       return NextResponse.json({ error: 'Faltan datos' }, { status: 400 })
+    }
+
+    const { data: intento } = await supabase
+      .from('intentos')
+      .select('id, evaluacion_id, alumno_id, preguntas')
+      .eq('id', intentoId)
+      .single()
+
+    if (!intento) {
+      return NextResponse.json({ error: 'Intento no encontrado' }, { status: 404 })
+    }
+
+    if (intento.alumno_id !== user.id) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+    }
+
+    const { data: yaCalificado } = await supabase
+      .from('resultados_evaluacion')
+      .select('id')
+      .eq('intento_id', intento.id)
+      .maybeSingle()
+
+    if (yaCalificado) {
+      return NextResponse.json({ error: 'Este intento ya fue calificado' }, { status: 400 })
     }
 
     const { data: evaluacion } = await supabase
       .from('evaluaciones')
-      .select('id, nota_minima, intentos_permitidos, curso_id')
-      .eq('id', evaluacionId)
+      .select('id, nota_minima, curso_id')
+      .eq('id', intento.evaluacion_id)
       .single()
 
     if (!evaluacion) {
@@ -28,44 +61,34 @@ export async function POST(request: Request) {
     }
 
     const esDocenteAdmin = await esDocenteOAdminDelCurso(supabase, user.id, evaluacion.curso_id)
-    const autorizado = esDocenteAdmin || await tieneAccesoCurso(supabase, user.id, evaluacion.curso_id)
-    if (!autorizado) {
-      return NextResponse.json({ error: 'No tienes acceso a este curso' }, { status: 403 })
-    }
-
-    if (!esDocenteAdmin && evaluacion.intentos_permitidos && evaluacion.intentos_permitidos > 0) {
-      const { count } = await supabase
-        .from('resultados_evaluacion')
-        .select('id', { count: 'exact', head: true })
-        .eq('alumno_id', user.id)
-        .eq('evaluacion_id', evaluacionId)
-
-      if ((count || 0) >= evaluacion.intentos_permitidos) {
-        return NextResponse.json(
-          { error: `Ya usaste tus ${evaluacion.intentos_permitidos} intento(s) permitido(s) para esta evaluación.` },
-          { status: 403 }
-        )
-      }
-    }
-
-    const { data: preguntas } = await supabase
-      .from('preguntas')
-      .select('id, tipo, respuesta_correcta, tolerancia')
-      .eq('evaluacion_id', evaluacionId)
-
-    if (!preguntas || preguntas.length === 0) {
-      return NextResponse.json({ error: 'Esta evaluación no tiene preguntas' }, { status: 400 })
-    }
+    const preguntas = intento.preguntas as PreguntaSnapshot[]
 
     let correctas = 0
     for (const p of preguntas) {
-      const respuestaAlumno = respuestas[p.id]
-      if (respuestaAlumno === undefined || respuestaAlumno === null || respuestaAlumno === '') continue
+      const respuestaAlumno = respuestas[p.pregunta_id]
+      if (respuestaAlumno === undefined || respuestaAlumno === null) continue
 
       if (p.tipo === 'numerica') {
-        const respNum = parseFloat(respuestaAlumno)
-        const correctaNum = parseFloat(p.respuesta_correcta)
-        if (!isNaN(respNum) && Math.abs(respNum - correctaNum) <= (p.tolerancia || 0)) {
+        if (respuestaAlumno === '') continue
+        const respNum = parseNumeroOFraccion(String(respuestaAlumno))
+        const correctaNum = parseNumeroOFraccion(String(p.respuesta_correcta))
+        if (respNum !== null && correctaNum !== null && Math.abs(respNum - correctaNum) <= (p.tolerancia || 0)) {
+          correctas++
+        }
+      } else if (p.tipo === 'par_numerico') {
+        const correctaPar = p.respuesta_correcta as { x: number; y: number }
+        const respX = parseNumeroOFraccion(String(respuestaAlumno?.x ?? ''))
+        const respY = parseNumeroOFraccion(String(respuestaAlumno?.y ?? ''))
+        if (
+          respX !== null && respY !== null &&
+          Math.abs(respX - correctaPar.x) <= (p.tolerancia || 0) &&
+          Math.abs(respY - correctaPar.y) <= (p.tolerancia || 0)
+        ) {
+          correctas++
+        }
+      } else if (p.tipo === 'texto_algebraico') {
+        if (respuestaAlumno === '') continue
+        if (normalizarTextoAlgebraico(String(respuestaAlumno)) === normalizarTextoAlgebraico(String(p.respuesta_correcta))) {
           correctas++
         }
       } else {
@@ -82,7 +105,8 @@ export async function POST(request: Request) {
     if (!esDocenteAdmin) {
       const { error: insertError } = await supabase.from('resultados_evaluacion').insert({
         alumno_id: user.id,
-        evaluacion_id: evaluacionId,
+        evaluacion_id: intento.evaluacion_id,
+        intento_id: intento.id,
         respuestas,
         puntaje,
         aprobado,
