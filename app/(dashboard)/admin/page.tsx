@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import LogoutButton from '@/components/auth/LogoutButton'
+import AutoRefresh from '@/components/admin/AutoRefresh'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getPerfil } from '@/lib/db'
 
@@ -87,6 +88,7 @@ export default async function AdminDashboard() {
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
+      <AutoRefresh intervaloMs={30000} />
 
       <div className="border-b border-slate-800 px-8 py-4 flex items-center justify-between">
         <Link href="/" className="text-xl font-bold">
