@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import TextoMath from '@/components/ui/TextoMath'
+import Combobox from '@/components/ui/Combobox'
 import { generarPlantilla, type TipoPlantilla } from '@/lib/plantillas'
 
 type TipoPregunta = 'opcion_multiple' | 'verdadero_falso' | 'numerica' | 'par_numerico' | 'texto_algebraico' | 'radical' | 'raices_cuadratica' | 'fraccion_algebraica'
@@ -45,6 +46,32 @@ const TIPO_SEGUN_PLANTILLA: Record<TipoPlantilla, TipoRespuesta> = {
   trig_razones_triangulo: 'numerica',
   limite_raiz: 'numerica',
 }
+
+const LABEL_TIPO_PLANTILLA: Record<TipoPlantilla, string> = {
+  ecuacion_lineal: 'Ecuación lineal',
+  sistema_2x2: 'Sistema de ecuaciones 2x2',
+  factorizacion_trinomio: 'Factorización de trinomio',
+  factor_comun: 'Factor común',
+  regla_de_tres: 'Regla de tres',
+  sistema_2x2_fracciones: 'Sistema de ecuaciones 2x2 (fracciones)',
+  ecuacion_lineal_radical: 'Ecuación lineal con solución radical',
+  factorizacion_exponentes_negativos: 'Factorización con exponentes negativos',
+  factorizacion_grado_3_4: 'Factorización de polinomio (grado 3 o 4)',
+  ecuacion_cuadratica: 'Ecuación cuadrática (fórmula general)',
+  limite_racional_directo: 'Límite racional (sustitución directa)',
+  limite_indeterminado: 'Límite indeterminado (0/0)',
+  derivada_polinomio: 'Derivada de polinomio (grado 2 a 4)',
+  derivada_racional: 'Derivada racional (regla del cociente)',
+  derivada_potencias_negativas: 'Derivada con exponentes negativos',
+  trig_identidad: 'Identidad trigonométrica',
+  trig_ecuacion_simple: 'Ecuación trigonométrica simple',
+  trig_razones_triangulo: 'Razones trigonométricas en triángulo rectángulo',
+  limite_raiz: 'Límite con raíz (racionalización)',
+}
+
+const OPCIONES_TIPO_PLANTILLA = (Object.entries(LABEL_TIPO_PLANTILLA) as [TipoPlantilla, string][]).map(
+  ([value, label]) => ({ value, label })
+)
 
 const LABEL_TIPO_RESPUESTA: Record<TipoRespuesta, string> = {
   numerica: 'numérica',
@@ -745,31 +772,12 @@ export default function CrearEvaluacionPage() {
                   <label className="block text-sm font-semibold text-slate-300 mb-2">
                     Tipo de plantilla
                   </label>
-                  <select
+                  <Combobox
+                    opciones={OPCIONES_TIPO_PLANTILLA}
                     value={p.tipo_plantilla}
-                    onChange={(e) => actualizarTipoPlantilla(index, e.target.value as TipoPlantilla)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 transition-colors"
-                  >
-                    <option value="ecuacion_lineal">Ecuación lineal</option>
-                    <option value="sistema_2x2">Sistema de ecuaciones 2x2</option>
-                    <option value="factorizacion_trinomio">Factorización de trinomio</option>
-                    <option value="factor_comun">Factor común</option>
-                    <option value="regla_de_tres">Regla de tres</option>
-                    <option value="sistema_2x2_fracciones">Sistema de ecuaciones 2x2 (fracciones)</option>
-                    <option value="ecuacion_lineal_radical">Ecuación lineal con solución radical</option>
-                    <option value="factorizacion_exponentes_negativos">Factorización con exponentes negativos</option>
-                    <option value="factorizacion_grado_3_4">Factorización de polinomio (grado 3 o 4)</option>
-                    <option value="ecuacion_cuadratica">Ecuación cuadrática (fórmula general)</option>
-                    <option value="limite_racional_directo">Límite racional (sustitución directa)</option>
-                    <option value="limite_indeterminado">Límite indeterminado (0/0)</option>
-                    <option value="derivada_polinomio">Derivada de polinomio (grado 2 a 4)</option>
-                    <option value="derivada_racional">Derivada racional (regla del cociente)</option>
-                    <option value="derivada_potencias_negativas">Derivada con exponentes negativos</option>
-                    <option value="trig_identidad">Identidad trigonométrica</option>
-                    <option value="trig_ecuacion_simple">Ecuación trigonométrica simple</option>
-                    <option value="trig_razones_triangulo">Razones trigonométricas en triángulo rectángulo</option>
-                    <option value="limite_raiz">Límite con raíz (racionalización)</option>
-                  </select>
+                    onChange={(valor) => actualizarTipoPlantilla(index, valor as TipoPlantilla)}
+                    placeholder="Busca una plantilla (ej: trig, deriv, factor)..."
+                  />
 
                   {p.tipo_plantilla && (
                     <p className="text-slate-500 text-xs mt-2 mb-4">
