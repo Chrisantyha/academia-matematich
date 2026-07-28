@@ -280,6 +280,7 @@ export default function EvaluacionPage() {
             {pregunta.tipo === 'numerica' && 'Respuesta numérica'}
             {pregunta.tipo === 'par_numerico' && 'Sistema de ecuaciones'}
             {pregunta.tipo === 'texto_algebraico' && 'Factorización'}
+            {pregunta.tipo === 'radical' && 'Respuesta en forma radical'}
           </div>
 
           <div className="text-lg font-semibold mb-6 leading-relaxed whitespace-pre-line">
@@ -382,6 +383,16 @@ export default function EvaluacionPage() {
               value={(respuestas[pregunta.id] as string) || ''}
               onChange={(e) => responder(pregunta.id, e.target.value)}
               placeholder="Ej: (x+3)(x+2)"
+              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-yellow-500 transition-colors text-lg"
+            />
+          )}
+
+          {pregunta.tipo === 'radical' && (
+            <input
+              type="text"
+              value={(respuestas[pregunta.id] as string) || ''}
+              onChange={(e) => responder(pregunta.id, e.target.value)}
+              placeholder="Ej: 2√3, raiz(12), sqrt(12)"
               className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-yellow-500 transition-colors text-lg"
             />
           )}

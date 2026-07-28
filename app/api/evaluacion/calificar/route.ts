@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { esDocenteOAdminDelCurso } from '@/lib/acceso'
 import { parseNumeroOFraccion } from '@/lib/numero'
-import { normalizarTextoAlgebraico } from '@/lib/plantillas'
+import { normalizarTextoAlgebraico, normalizarRadical } from '@/lib/plantillas'
 
 interface PreguntaSnapshot {
   pregunta_id: string
@@ -89,6 +89,11 @@ export async function POST(request: Request) {
       } else if (p.tipo === 'texto_algebraico') {
         if (respuestaAlumno === '') continue
         if (normalizarTextoAlgebraico(String(respuestaAlumno)) === normalizarTextoAlgebraico(String(p.respuesta_correcta))) {
+          correctas++
+        }
+      } else if (p.tipo === 'radical') {
+        if (respuestaAlumno === '') continue
+        if (normalizarRadical(String(respuestaAlumno)) === normalizarRadical(String(p.respuesta_correcta))) {
           correctas++
         }
       } else {

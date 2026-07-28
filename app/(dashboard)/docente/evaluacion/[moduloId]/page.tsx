@@ -7,8 +7,8 @@ import { createClient } from '@/lib/supabase'
 import TextoMath from '@/components/ui/TextoMath'
 import { generarPlantilla, type TipoPlantilla } from '@/lib/plantillas'
 
-type TipoPregunta = 'opcion_multiple' | 'verdadero_falso' | 'numerica' | 'par_numerico' | 'texto_algebraico'
-type TipoRespuesta = 'numerica' | 'par_numerico' | 'texto_algebraico'
+type TipoPregunta = 'opcion_multiple' | 'verdadero_falso' | 'numerica' | 'par_numerico' | 'texto_algebraico' | 'radical'
+type TipoRespuesta = 'numerica' | 'par_numerico' | 'texto_algebraico' | 'radical'
 
 interface Pregunta {
   tipo: TipoPregunta
@@ -30,12 +30,17 @@ const TIPO_SEGUN_PLANTILLA: Record<TipoPlantilla, TipoRespuesta> = {
   sistema_2x2: 'par_numerico',
   factorizacion_trinomio: 'texto_algebraico',
   factor_comun: 'texto_algebraico',
+  sistema_2x2_fracciones: 'par_numerico',
+  ecuacion_lineal_radical: 'radical',
+  factorizacion_exponentes_negativos: 'texto_algebraico',
+  factorizacion_grado_3_4: 'texto_algebraico',
 }
 
 const LABEL_TIPO_RESPUESTA: Record<TipoRespuesta, string> = {
   numerica: 'numérica',
   par_numerico: 'par de valores (x, y)',
   texto_algebraico: 'texto algebraico',
+  radical: 'radical (ej: 2√3)',
 }
 
 const DEFAULTS_PARAMETROS: Record<TipoPlantilla, Record<string, number>> = {
@@ -44,6 +49,10 @@ const DEFAULTS_PARAMETROS: Record<TipoPlantilla, Record<string, number>> = {
   factorizacion_trinomio: { p_min: -10, p_max: 10, q_min: -10, q_max: 10 },
   factor_comun: { a_min: -20, a_max: 20, b_min: -20, b_max: 20 },
   regla_de_tres: { a_min: 1, a_max: 20, k_min: 1, k_max: 20, c_min: 1, c_max: 20 },
+  sistema_2x2_fracciones: { num_min: 1, num_max: 5, den_min: 2, den_max: 5, x_min: -10, x_max: 10, y_min: -10, y_max: 10 },
+  ecuacion_lineal_radical: { a_min: 1, a_max: 5, k_min: 1, k_max: 5, n_min: 2, n_max: 10 },
+  factorizacion_exponentes_negativos: { exp_min: -4, exp_max: -1, coef_min: -10, coef_max: 10 },
+  factorizacion_grado_3_4: { grado: 3, raiz_min: -6, raiz_max: 6 },
 }
 
 const CAMPOS_PARAMETROS: Record<TipoPlantilla, { clave: string; label: string }[]> = {
@@ -70,6 +79,25 @@ const CAMPOS_PARAMETROS: Record<TipoPlantilla, { clave: string; label: string }[
     { clave: 'a_min', label: 'Cantidad base mínima' }, { clave: 'a_max', label: 'Cantidad base máxima' },
     { clave: 'k_min', label: 'Precio unitario mínimo' }, { clave: 'k_max', label: 'Precio unitario máximo' },
     { clave: 'c_min', label: 'Cantidad consultada mínima' }, { clave: 'c_max', label: 'Cantidad consultada máxima' },
+  ],
+  sistema_2x2_fracciones: [
+    { clave: 'num_min', label: 'Numerador mínimo' }, { clave: 'num_max', label: 'Numerador máximo' },
+    { clave: 'den_min', label: 'Denominador mínimo' }, { clave: 'den_max', label: 'Denominador máximo' },
+    { clave: 'x_min', label: 'Solución x mínima' }, { clave: 'x_max', label: 'Solución x máxima' },
+    { clave: 'y_min', label: 'Solución y mínima' }, { clave: 'y_max', label: 'Solución y máxima' },
+  ],
+  ecuacion_lineal_radical: [
+    { clave: 'a_min', label: 'Coeficiente a mínimo' }, { clave: 'a_max', label: 'Coeficiente a máximo' },
+    { clave: 'k_min', label: 'Coeficiente de la respuesta mínimo' }, { clave: 'k_max', label: 'Coeficiente de la respuesta máximo' },
+    { clave: 'n_min', label: 'Radicando mínimo' }, { clave: 'n_max', label: 'Radicando máximo' },
+  ],
+  factorizacion_exponentes_negativos: [
+    { clave: 'exp_min', label: 'Exponente mínimo (negativo)' }, { clave: 'exp_max', label: 'Exponente máximo (negativo)' },
+    { clave: 'coef_min', label: 'Coeficiente mínimo' }, { clave: 'coef_max', label: 'Coeficiente máximo' },
+  ],
+  factorizacion_grado_3_4: [
+    { clave: 'grado', label: 'Grado (3 o 4)' },
+    { clave: 'raiz_min', label: 'Raíz mínima' }, { clave: 'raiz_max', label: 'Raíz máxima' },
   ],
 }
 
@@ -655,6 +683,10 @@ export default function CrearEvaluacionPage() {
                     <option value="factorizacion_trinomio">Factorización de trinomio</option>
                     <option value="factor_comun">Factor común</option>
                     <option value="regla_de_tres">Regla de tres</option>
+                    <option value="sistema_2x2_fracciones">Sistema de ecuaciones 2x2 (fracciones)</option>
+                    <option value="ecuacion_lineal_radical">Ecuación lineal con solución radical</option>
+                    <option value="factorizacion_exponentes_negativos">Factorización con exponentes negativos</option>
+                    <option value="factorizacion_grado_3_4">Factorización de polinomio (grado 3 o 4)</option>
                   </select>
 
                   {p.tipo_plantilla && (
