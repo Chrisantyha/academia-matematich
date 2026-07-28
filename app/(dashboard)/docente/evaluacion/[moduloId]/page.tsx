@@ -125,44 +125,52 @@ export default function CrearEvaluacionPage() {
     cargarExistente()
   }, [moduloId])
 
-  const preguntaVacia: Pregunta = {
-    tipo: 'opcion_multiple',
-    pregunta: '',
-    opciones: ['', '', '', ''],
-    respuesta_correcta: '',
-    tolerancia: 0,
-    orden: preguntas.length + 1,
-    es_plantilla: false,
-    tipo_plantilla: '',
-    parametros: {},
+  function crearPreguntaVacia(orden: number): Pregunta {
+    return {
+      tipo: 'opcion_multiple',
+      pregunta: '',
+      opciones: ['', '', '', ''],
+      respuesta_correcta: '',
+      tolerancia: 0,
+      orden,
+      es_plantilla: false,
+      tipo_plantilla: '',
+      parametros: {},
+    }
   }
 
   function agregarPregunta() {
-    setPreguntas([...preguntas, { ...preguntaVacia, orden: preguntas.length + 1 }])
+    setPreguntas((prev) => [...prev, crearPreguntaVacia(prev.length + 1)])
   }
 
   function actualizarPregunta(index: number, campo: string, valor: any) {
-    const nuevas = [...preguntas]
-    nuevas[index] = { ...nuevas[index], [campo]: valor }
-    if (campo === 'tipo') {
-      if (valor === 'verdadero_falso') {
-        nuevas[index].opciones = ['Verdadero', 'Falso']
-        nuevas[index].respuesta_correcta = ''
-      } else if (valor === 'opcion_multiple') {
-        nuevas[index].opciones = ['', '', '', '']
-        nuevas[index].respuesta_correcta = ''
-      } else if (valor === 'numerica') {
-        nuevas[index].opciones = []
-        nuevas[index].respuesta_correcta = ''
+    setPreguntas((prev) => {
+      const nuevas = [...prev]
+      nuevas[index] = { ...nuevas[index], [campo]: valor }
+      if (campo === 'tipo') {
+        if (valor === 'verdadero_falso') {
+          nuevas[index].opciones = ['Verdadero', 'Falso']
+          nuevas[index].respuesta_correcta = ''
+        } else if (valor === 'opcion_multiple') {
+          nuevas[index].opciones = ['', '', '', '']
+          nuevas[index].respuesta_correcta = ''
+        } else if (valor === 'numerica') {
+          nuevas[index].opciones = []
+          nuevas[index].respuesta_correcta = ''
+        }
       }
-    }
-    setPreguntas(nuevas)
+      return nuevas
+    })
   }
 
   function actualizarOpcion(preguntaIndex: number, opcionIndex: number, valor: string) {
-    const nuevas = [...preguntas]
-    nuevas[preguntaIndex].opciones[opcionIndex] = valor
-    setPreguntas(nuevas)
+    setPreguntas((prev) => {
+      const nuevas = [...prev]
+      const opciones = [...nuevas[preguntaIndex].opciones]
+      opciones[opcionIndex] = valor
+      nuevas[preguntaIndex] = { ...nuevas[preguntaIndex], opciones }
+      return nuevas
+    })
   }
 
   function limpiarPreview(index: number) {
@@ -174,50 +182,56 @@ export default function CrearEvaluacionPage() {
   }
 
   function cambiarEsPlantilla(index: number, esPlantilla: boolean) {
-    const nuevas = [...preguntas]
-    if (esPlantilla) {
-      const tipoPlantilla: TipoPlantilla = 'ecuacion_lineal'
-      nuevas[index] = {
-        ...nuevas[index],
-        es_plantilla: true,
-        tipo_plantilla: tipoPlantilla,
-        parametros: { ...DEFAULTS_PARAMETROS[tipoPlantilla] },
-        tipo: TIPO_SEGUN_PLANTILLA[tipoPlantilla],
+    setPreguntas((prev) => {
+      const nuevas = [...prev]
+      if (esPlantilla) {
+        const tipoPlantilla: TipoPlantilla = 'ecuacion_lineal'
+        nuevas[index] = {
+          ...nuevas[index],
+          es_plantilla: true,
+          tipo_plantilla: tipoPlantilla,
+          parametros: { ...DEFAULTS_PARAMETROS[tipoPlantilla] },
+          tipo: TIPO_SEGUN_PLANTILLA[tipoPlantilla],
+        }
+      } else {
+        nuevas[index] = {
+          ...nuevas[index],
+          es_plantilla: false,
+          tipo_plantilla: '',
+          parametros: {},
+          tipo: 'opcion_multiple',
+          opciones: ['', '', '', ''],
+          respuesta_correcta: '',
+        }
       }
-    } else {
-      nuevas[index] = {
-        ...nuevas[index],
-        es_plantilla: false,
-        tipo_plantilla: '',
-        parametros: {},
-        tipo: 'opcion_multiple',
-        opciones: ['', '', '', ''],
-        respuesta_correcta: '',
-      }
-    }
-    setPreguntas(nuevas)
+      return nuevas
+    })
     limpiarPreview(index)
   }
 
   function actualizarTipoPlantilla(index: number, tipoPlantilla: TipoPlantilla) {
-    const nuevas = [...preguntas]
-    nuevas[index] = {
-      ...nuevas[index],
-      tipo_plantilla: tipoPlantilla,
-      parametros: { ...DEFAULTS_PARAMETROS[tipoPlantilla] },
-      tipo: TIPO_SEGUN_PLANTILLA[tipoPlantilla],
-    }
-    setPreguntas(nuevas)
+    setPreguntas((prev) => {
+      const nuevas = [...prev]
+      nuevas[index] = {
+        ...nuevas[index],
+        tipo_plantilla: tipoPlantilla,
+        parametros: { ...DEFAULTS_PARAMETROS[tipoPlantilla] },
+        tipo: TIPO_SEGUN_PLANTILLA[tipoPlantilla],
+      }
+      return nuevas
+    })
     limpiarPreview(index)
   }
 
   function actualizarParametro(index: number, clave: string, valor: number) {
-    const nuevas = [...preguntas]
-    nuevas[index] = {
-      ...nuevas[index],
-      parametros: { ...nuevas[index].parametros, [clave]: valor },
-    }
-    setPreguntas(nuevas)
+    setPreguntas((prev) => {
+      const nuevas = [...prev]
+      nuevas[index] = {
+        ...nuevas[index],
+        parametros: { ...nuevas[index].parametros, [clave]: valor },
+      }
+      return nuevas
+    })
     limpiarPreview(index)
   }
 
@@ -237,7 +251,7 @@ export default function CrearEvaluacionPage() {
   }
 
   function eliminarPregunta(index: number) {
-    setPreguntas(preguntas.filter((_, i) => i !== index))
+    setPreguntas((prev) => prev.filter((_, i) => i !== index))
   }
 
   async function guardarEvaluacion() {
@@ -326,7 +340,7 @@ export default function CrearEvaluacionPage() {
     }
 
     for (const p of preguntas) {
-      await supabase.from('preguntas').insert({
+      const { error: insertError } = await supabase.from('preguntas').insert({
         evaluacion_id: evalId,
         tipo: p.tipo,
         pregunta: p.es_plantilla ? '' : p.pregunta,
@@ -338,6 +352,13 @@ export default function CrearEvaluacionPage() {
         tipo_plantilla: p.es_plantilla ? p.tipo_plantilla : null,
         parametros: p.es_plantilla ? p.parametros : null,
       })
+
+      if (insertError) {
+        console.error('Error al guardar pregunta:', insertError)
+        setError(`Error al guardar la pregunta ${p.orden}: ${insertError.message}. No se completó el guardado — revisa e intenta de nuevo.`)
+        setGuardando(false)
+        return
+      }
     }
 
     alert(evaluacionId ? 'Evaluacion actualizada correctamente' : 'Evaluacion guardada correctamente')
