@@ -7,8 +7,8 @@ import { createClient } from '@/lib/supabase'
 import TextoMath from '@/components/ui/TextoMath'
 import { generarPlantilla, type TipoPlantilla } from '@/lib/plantillas'
 
-type TipoPregunta = 'opcion_multiple' | 'verdadero_falso' | 'numerica' | 'par_numerico' | 'texto_algebraico' | 'radical'
-type TipoRespuesta = 'numerica' | 'par_numerico' | 'texto_algebraico' | 'radical'
+type TipoPregunta = 'opcion_multiple' | 'verdadero_falso' | 'numerica' | 'par_numerico' | 'texto_algebraico' | 'radical' | 'raices_cuadratica'
+type TipoRespuesta = 'numerica' | 'par_numerico' | 'texto_algebraico' | 'radical' | 'raices_cuadratica'
 
 interface Pregunta {
   tipo: TipoPregunta
@@ -34,6 +34,9 @@ const TIPO_SEGUN_PLANTILLA: Record<TipoPlantilla, TipoRespuesta> = {
   ecuacion_lineal_radical: 'radical',
   factorizacion_exponentes_negativos: 'texto_algebraico',
   factorizacion_grado_3_4: 'texto_algebraico',
+  ecuacion_cuadratica: 'raices_cuadratica',
+  limite_racional_directo: 'numerica',
+  limite_indeterminado: 'numerica',
 }
 
 const LABEL_TIPO_RESPUESTA: Record<TipoRespuesta, string> = {
@@ -41,6 +44,7 @@ const LABEL_TIPO_RESPUESTA: Record<TipoRespuesta, string> = {
   par_numerico: 'par de valores (x, y)',
   texto_algebraico: 'texto algebraico',
   radical: 'radical (ej: 2√3)',
+  raices_cuadratica: 'dos raíces (sin orden fijo)',
 }
 
 const DEFAULTS_PARAMETROS: Record<TipoPlantilla, Record<string, number>> = {
@@ -53,6 +57,9 @@ const DEFAULTS_PARAMETROS: Record<TipoPlantilla, Record<string, number>> = {
   ecuacion_lineal_radical: { a_min: 1, a_max: 5, k_min: 1, k_max: 5, n_min: 2, n_max: 10 },
   factorizacion_exponentes_negativos: { exp_min: -4, exp_max: -1, coef_min: -10, coef_max: 10 },
   factorizacion_grado_3_4: { grado: 3, raiz_min: -6, raiz_max: 6 },
+  ecuacion_cuadratica: { a_min: 1, a_max: 3, r_min: -8, r_max: 8 },
+  limite_racional_directo: { a_min: 1, a_max: 10, b_min: -10, b_max: 10, c_min: 1, c_max: 10, d_min: -10, d_max: 10, x0_min: -5, x0_max: 5 },
+  limite_indeterminado: { x0_min: -6, x0_max: 6, r_num_min: -6, r_num_max: 6, r_den_min: -6, r_den_max: 6 },
 }
 
 const CAMPOS_PARAMETROS: Record<TipoPlantilla, { clave: string; label: string }[]> = {
@@ -98,6 +105,22 @@ const CAMPOS_PARAMETROS: Record<TipoPlantilla, { clave: string; label: string }[
   factorizacion_grado_3_4: [
     { clave: 'grado', label: 'Grado (3 o 4)' },
     { clave: 'raiz_min', label: 'Raíz mínima' }, { clave: 'raiz_max', label: 'Raíz máxima' },
+  ],
+  ecuacion_cuadratica: [
+    { clave: 'a_min', label: 'Coeficiente líder mínimo' }, { clave: 'a_max', label: 'Coeficiente líder máximo' },
+    { clave: 'r_min', label: 'Raíz mínima' }, { clave: 'r_max', label: 'Raíz máxima' },
+  ],
+  limite_racional_directo: [
+    { clave: 'a_min', label: 'Numerador: coef. x mínimo' }, { clave: 'a_max', label: 'Numerador: coef. x máximo' },
+    { clave: 'b_min', label: 'Numerador: constante mínima' }, { clave: 'b_max', label: 'Numerador: constante máxima' },
+    { clave: 'c_min', label: 'Denominador: coef. x mínimo' }, { clave: 'c_max', label: 'Denominador: coef. x máximo' },
+    { clave: 'd_min', label: 'Denominador: constante mínima' }, { clave: 'd_max', label: 'Denominador: constante máxima' },
+    { clave: 'x0_min', label: 'Punto x0 mínimo' }, { clave: 'x0_max', label: 'Punto x0 máximo' },
+  ],
+  limite_indeterminado: [
+    { clave: 'x0_min', label: 'Punto x0 mínimo' }, { clave: 'x0_max', label: 'Punto x0 máximo' },
+    { clave: 'r_num_min', label: 'Segunda raíz del numerador mínima' }, { clave: 'r_num_max', label: 'Segunda raíz del numerador máxima' },
+    { clave: 'r_den_min', label: 'Segunda raíz del denominador mínima' }, { clave: 'r_den_max', label: 'Segunda raíz del denominador máxima' },
   ],
 }
 
@@ -268,10 +291,13 @@ export default function CrearEvaluacionPage() {
     if (!p.tipo_plantilla) return
     try {
       const resultado = generarPlantilla(p.tipo_plantilla, p.parametros)
+      const correcta = resultado.respuestaCorrecta
       const respuestaTexto =
-        typeof resultado.respuestaCorrecta === 'string'
-          ? resultado.respuestaCorrecta
-          : `x=${resultado.respuestaCorrecta.x}, y=${resultado.respuestaCorrecta.y}`
+        typeof correcta === 'string'
+          ? correcta
+          : 'x' in correcta
+            ? `x=${correcta.x}, y=${correcta.y}`
+            : `x1=${correcta.x1}, x2=${correcta.x2}`
       setPreviews((prev) => ({ ...prev, [index]: { texto: resultado.preguntaTexto, respuesta: respuestaTexto } }))
     } catch (err) {
       setPreviews((prev) => ({ ...prev, [index]: { error: err instanceof Error ? err.message : 'Error al generar' } }))
@@ -687,6 +713,9 @@ export default function CrearEvaluacionPage() {
                     <option value="ecuacion_lineal_radical">Ecuación lineal con solución radical</option>
                     <option value="factorizacion_exponentes_negativos">Factorización con exponentes negativos</option>
                     <option value="factorizacion_grado_3_4">Factorización de polinomio (grado 3 o 4)</option>
+                    <option value="ecuacion_cuadratica">Ecuación cuadrática (fórmula general)</option>
+                    <option value="limite_racional_directo">Límite racional (sustitución directa)</option>
+                    <option value="limite_indeterminado">Límite indeterminado (0/0)</option>
                   </select>
 
                   {p.tipo_plantilla && (

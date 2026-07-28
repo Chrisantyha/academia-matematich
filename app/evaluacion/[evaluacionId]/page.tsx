@@ -21,6 +21,7 @@ interface Evaluacion {
 }
 
 type RespuestaPar = { x: string; y: string }
+type RespuestaRaices = { x1: string; x2: string }
 
 export default function EvaluacionPage() {
   const params = useParams()
@@ -28,7 +29,7 @@ export default function EvaluacionPage() {
 
   const [evaluacion, setEvaluacion] = useState<Evaluacion | null>(null)
   const [preguntas, setPreguntas] = useState<Pregunta[]>([])
-  const [respuestas, setRespuestas] = useState<Record<string, string | RespuestaPar>>({})
+  const [respuestas, setRespuestas] = useState<Record<string, string | RespuestaPar | RespuestaRaices>>({})
   const [loading, setLoading] = useState(true)
   const [intentoId, setIntentoId] = useState<string | null>(null)
   const [esDocenteAdmin, setEsDocenteAdmin] = useState(false)
@@ -80,6 +81,11 @@ export default function EvaluacionPage() {
   function responderPar(preguntaId: string, eje: 'x' | 'y', valor: string) {
     const actual = (respuestas[preguntaId] as RespuestaPar | undefined) || { x: '', y: '' }
     setRespuestas({ ...respuestas, [preguntaId]: { ...actual, [eje]: valor } })
+  }
+
+  function responderRaices(preguntaId: string, cual: 'x1' | 'x2', valor: string) {
+    const actual = (respuestas[preguntaId] as RespuestaRaices | undefined) || { x1: '', x2: '' }
+    setRespuestas({ ...respuestas, [preguntaId]: { ...actual, [cual]: valor } })
   }
 
   async function enviarEvaluacion() {
@@ -281,6 +287,7 @@ export default function EvaluacionPage() {
             {pregunta.tipo === 'par_numerico' && 'Sistema de ecuaciones'}
             {pregunta.tipo === 'texto_algebraico' && 'Factorización'}
             {pregunta.tipo === 'radical' && 'Respuesta en forma radical'}
+            {pregunta.tipo === 'raices_cuadratica' && 'Ecuación cuadrática'}
           </div>
 
           <div className="text-lg font-semibold mb-6 leading-relaxed whitespace-pre-line">
@@ -395,6 +402,31 @@ export default function EvaluacionPage() {
               placeholder="Ej: 2√3, raiz(12), sqrt(12)"
               className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-yellow-500 transition-colors text-lg"
             />
+          )}
+
+          {pregunta.tipo === 'raices_cuadratica' && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-slate-400 text-xs mb-1 block">Solución 1</label>
+                <input
+                  type="text"
+                  value={(respuestas[pregunta.id] as RespuestaRaices | undefined)?.x1 || ''}
+                  onChange={(e) => responderRaices(pregunta.id, 'x1', e.target.value)}
+                  placeholder="Ej: 3 o 6/2"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-yellow-500 transition-colors text-lg"
+                />
+              </div>
+              <div>
+                <label className="text-slate-400 text-xs mb-1 block">Solución 2</label>
+                <input
+                  type="text"
+                  value={(respuestas[pregunta.id] as RespuestaRaices | undefined)?.x2 || ''}
+                  onChange={(e) => responderRaices(pregunta.id, 'x2', e.target.value)}
+                  placeholder="Ej: -2 o 4/2"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-yellow-500 transition-colors text-lg"
+                />
+              </div>
+            </div>
           )}
         </div>
 

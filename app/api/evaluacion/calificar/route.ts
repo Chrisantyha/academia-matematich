@@ -7,7 +7,7 @@ import { normalizarTextoAlgebraico, normalizarRadical } from '@/lib/plantillas'
 interface PreguntaSnapshot {
   pregunta_id: string
   tipo: string
-  respuesta_correcta: string | { x: number; y: number }
+  respuesta_correcta: string | { x: number; y: number } | { x1: number; x2: number }
   tolerancia: number
 }
 
@@ -95,6 +95,18 @@ export async function POST(request: Request) {
         if (respuestaAlumno === '') continue
         if (normalizarRadical(String(respuestaAlumno)) === normalizarRadical(String(p.respuesta_correcta))) {
           correctas++
+        }
+      } else if (p.tipo === 'raices_cuadratica') {
+        const correctaRaices = p.respuesta_correcta as { x1: number; x2: number }
+        const v1 = parseNumeroOFraccion(String(respuestaAlumno?.x1 ?? ''))
+        const v2 = parseNumeroOFraccion(String(respuestaAlumno?.x2 ?? ''))
+        const tol = p.tolerancia || 0
+        if (v1 !== null && v2 !== null) {
+          const ordenDirecto = Math.abs(v1 - correctaRaices.x1) <= tol && Math.abs(v2 - correctaRaices.x2) <= tol
+          const ordenInvertido = Math.abs(v1 - correctaRaices.x2) <= tol && Math.abs(v2 - correctaRaices.x1) <= tol
+          if (ordenDirecto || ordenInvertido) {
+            correctas++
+          }
         }
       } else {
         if (respuestaAlumno === p.respuesta_correcta) {

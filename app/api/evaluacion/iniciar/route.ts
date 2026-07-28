@@ -9,7 +9,7 @@ interface PreguntaSnapshot {
   tipo: string
   pregunta_texto: string
   opciones: string[] | null
-  respuesta_correcta: string | { x: number; y: number }
+  respuesta_correcta: string | { x: number; y: number } | { x1: number; x2: number }
   tolerancia: number
   valores_generados: Record<string, number> | null
 }

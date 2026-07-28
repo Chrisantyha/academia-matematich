@@ -8,11 +8,14 @@ export type TipoPlantilla =
   | 'ecuacion_lineal_radical'
   | 'factorizacion_exponentes_negativos'
   | 'factorizacion_grado_3_4'
+  | 'ecuacion_cuadratica'
+  | 'limite_racional_directo'
+  | 'limite_indeterminado'
 
 export interface GeneracionPlantilla {
   preguntaTexto: string
   valoresGenerados: Record<string, number>
-  respuestaCorrecta: string | { x: number; y: number }
+  respuestaCorrecta: string | { x: number; y: number } | { x1: number; x2: number }
   tolerancia: number
 }
 
@@ -510,6 +513,111 @@ function generarFactorizacionGrado34(parametros: Record<string, number>): Genera
   }
 }
 
+function generarEcuacionCuadratica(parametros: Record<string, number>): GeneracionPlantilla {
+  const aMin = requerido(parametros, 'a_min'), aMax = requerido(parametros, 'a_max')
+  const rMin = requerido(parametros, 'r_min'), rMax = requerido(parametros, 'r_max')
+
+  const a = randIntNoCero(aMin, aMax)
+  const r1 = randIntNoCero(rMin, rMax)
+  const r2 = randIntNoCero(rMin, rMax)
+
+  // a·(x-r1)(x-r2) = a·x² - a(r1+r2)x + a·r1·r2 — el discriminante de esta
+  // forma es siempre a²(r1-r2)², un cuadrado perfecto por construcción.
+  const b = -a * (r1 + r2)
+  const c = a * r1 * r2
+
+  const terminoB = b === 0 ? '' : formatoSiguientePotencia(b, 1)
+  const terminoC = c === 0 ? '' : formatoSiguientePotencia(c, 0)
+  const preguntaTexto = `Resuelve: ${formatoTerminoPotencia(a, 2)}${terminoB}${terminoC} = 0`
+
+  return {
+    preguntaTexto,
+    valoresGenerados: { a, b, c, r1, r2 },
+    respuestaCorrecta: { x1: r1, x2: r2 },
+    tolerancia: 0,
+  }
+}
+
+function generarLimiteRacionalDirecto(parametros: Record<string, number>): GeneracionPlantilla {
+  const aMin = requerido(parametros, 'a_min'), aMax = requerido(parametros, 'a_max')
+  const bMin = requerido(parametros, 'b_min'), bMax = requerido(parametros, 'b_max')
+  const cMin = requerido(parametros, 'c_min'), cMax = requerido(parametros, 'c_max')
+  const dMin = requerido(parametros, 'd_min'), dMax = requerido(parametros, 'd_max')
+  const x0Min = requerido(parametros, 'x0_min'), x0Max = requerido(parametros, 'x0_max')
+
+  const a = randIntNoCero(aMin, aMax)
+  const b = randInt(bMin, bMax)
+
+  let c = 0, d = 0, x0 = 0
+  let encontrado = false
+  for (let i = 0; i < 200; i++) {
+    c = randIntNoCero(cMin, cMax)
+    d = randInt(dMin, dMax)
+    x0 = randInt(x0Min, x0Max)
+    if (c * x0 + d !== 0) {
+      encontrado = true
+      break
+    }
+  }
+  if (!encontrado) {
+    throw new Error('Parámetros inválidos: no se pudo generar un denominador que no se anule en x0')
+  }
+
+  const resultado = reducirFraccion(a * x0 + b, c * x0 + d)
+
+  const terminoB = b === 0 ? '' : formatoSiguiente(b, '')
+  const terminoD = d === 0 ? '' : formatoSiguiente(d, '')
+  const preguntaTexto = `Calcula: lim(x→${x0}) (${formatoPrimero(a, 'x')}${terminoB})/(${formatoPrimero(c, 'x')}${terminoD})`
+
+  return {
+    preguntaTexto,
+    valoresGenerados: { a, b, c, d, x0 },
+    respuestaCorrecta: formatoFraccionSimple(resultado),
+    tolerancia: 0.001,
+  }
+}
+
+function generarLimiteIndeterminado(parametros: Record<string, number>): GeneracionPlantilla {
+  const x0 = randInt(requerido(parametros, 'x0_min'), requerido(parametros, 'x0_max'))
+  const rNum = randInt(requerido(parametros, 'r_num_min'), requerido(parametros, 'r_num_max'))
+  const rDenMin = requerido(parametros, 'r_den_min')
+  const rDenMax = requerido(parametros, 'r_den_max')
+
+  let rDen = 0
+  let encontrado = false
+  for (let i = 0; i < 200; i++) {
+    rDen = randInt(rDenMin, rDenMax)
+    if (rDen !== x0 && rDen !== rNum) {
+      encontrado = true
+      break
+    }
+  }
+  if (!encontrado) {
+    throw new Error('Parámetros inválidos: no se pudo generar una segunda raíz de denominador distinta de x0 y de la raíz del numerador')
+  }
+
+  // numerador = (x-x0)(x-rNum), denominador = (x-x0)(x-rDen): comparten la
+  // raíz x0 (0/0 al sustituir); tras cancelar (x-x0) queda (x0-rNum)/(x0-rDen).
+  const bNum = -(x0 + rNum)
+  const cNum = x0 * rNum
+  const bDen = -(x0 + rDen)
+  const cDen = x0 * rDen
+
+  const terminoCuadratico = (b: number, c: number) =>
+    `${formatoTerminoPotencia(1, 2)}${b === 0 ? '' : formatoSiguientePotencia(b, 1)}${c === 0 ? '' : formatoSiguientePotencia(c, 0)}`
+
+  const preguntaTexto = `Calcula: lim(x→${x0}) (${terminoCuadratico(bNum, cNum)})/(${terminoCuadratico(bDen, cDen)})`
+
+  const resultado = reducirFraccion(x0 - rNum, x0 - rDen)
+
+  return {
+    preguntaTexto,
+    valoresGenerados: { x0, r_num: rNum, r_den: rDen },
+    respuestaCorrecta: formatoFraccionSimple(resultado),
+    tolerancia: 0.001,
+  }
+}
+
 function generarReglaDeTres(parametros: Record<string, number>): GeneracionPlantilla {
   const a = randIntPositivo(requerido(parametros, 'a_min'), requerido(parametros, 'a_max'))
   const k = randIntPositivo(requerido(parametros, 'k_min'), requerido(parametros, 'k_max'))
@@ -542,6 +650,9 @@ export function generarPlantilla(
     case 'ecuacion_lineal_radical': return generarEcuacionLinealRadical(parametros)
     case 'factorizacion_exponentes_negativos': return generarFactorizacionExponentesNegativos(parametros)
     case 'factorizacion_grado_3_4': return generarFactorizacionGrado34(parametros)
+    case 'ecuacion_cuadratica': return generarEcuacionCuadratica(parametros)
+    case 'limite_racional_directo': return generarLimiteRacionalDirecto(parametros)
+    case 'limite_indeterminado': return generarLimiteIndeterminado(parametros)
     default:
       throw new Error(`Tipo de plantilla desconocido: ${tipo}`)
   }
