@@ -501,7 +501,7 @@ export default function GestionarCursoPage() {
                           <div className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-3">
                             Lecciones
                           </div>
-                          {modulo.lecciones
+                          {[...modulo.lecciones]
                             .sort((a, b) => a.orden - b.orden)
                             .map((leccion) => (
                             <div key={leccion.id} className="flex items-center gap-3 py-2 border-b border-slate-800 last:border-0">
