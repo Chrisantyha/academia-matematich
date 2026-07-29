@@ -125,6 +125,83 @@ function aSuperindice(valor: number): string {
   return String(valor).split('').map((c) => SUPERINDICES[c] ?? c).join('')
 }
 
+// ---------- jerarquía de símbolos de agrupación: (), luego [], luego {} ----------
+//
+// Convención matemática estándar: el nivel de agrupación MÁS INTERNO usa
+// paréntesis, el siguiente hacia afuera corchetes, el siguiente llaves — y si
+// se necesitan más de 3 niveles a lo largo de la MISMA cadena de anidado, se
+// vuelve a empezar el ciclo en (). "frac" no consume un nivel propio (la
+// barra de fracción ya delimita visualmente sin ambigüedad) pero sí se
+// recorre para encontrar agrupaciones más adentro de su numerador/denominador.
+const SIMBOLOS_AGRUPACION: [string, string][] = [
+  ['(', ')'],
+  ['[', ']'],
+  ['{', '}'],
+]
+
+function envolver(cuerpo: string, profundidad: number): string {
+  const [abre, cierra] = SIMBOLOS_AGRUPACION[profundidad % SIMBOLOS_AGRUPACION.length]
+  return `${abre}${cuerpo}${cierra}`
+}
+
+// rangos (profundidad ya resuelta, no solo "distancia") de los envoltorios
+// que quedan INMEDIATAMENTE adentro de `nodo` — el primer 'grupo' (o parte de
+// fracción implícitamente envuelta) que se encuentra bajando por cada rama,
+// sin seguir bajando más allá de él (lo que haya adentro de ESE envoltorio ya
+// no es "inmediato" para quien pregunta, es asunto de ese envoltorio). Un
+// wrapper nuevo no puede compartir símbolo con NINGUNO de estos — no alcanza
+// con evitar solo el más profundo, porque dos ramas hermanas a profundidades
+// distintas (una honda, una plana) pueden terminar chocando igual si solo se
+// mira "profundidad máxima + 1" con ciclo módulo 3.
+function rangosInmediatos(nodo: Nodo): number[] {
+  switch (nodo.tipo) {
+    case 'num':
+    case 'var':
+      return []
+    case 'pow':
+      return rangosInmediatos(nodo.base)
+    case 'suma':
+      return nodo.terminos.flatMap(rangosInmediatos)
+    case 'prod':
+      return nodo.factores.flatMap(rangosInmediatos)
+    case 'grupo':
+      return [rangoDeGrupo(nodo)]
+    case 'frac':
+      return [...rangosInmediatosParteFraccion(nodo.numerador), ...rangosInmediatosParteFraccion(nodo.denominador)]
+  }
+}
+
+// numerador/denominador de una fracción: 'suma' y 'prod' con más de un factor
+// reciben ahí un símbolo de agrupación EXTRA e implícito (ver
+// renderFraccionParte) que no llevarían en cualquier otro contexto — para
+// quien mira desde afuera, ESE envoltorio implícito es el límite inmediato,
+// no hace falta seguir bajando. "frac" en sí no consume rango propio (la
+// barra ya delimita sin ambigüedad) así que solo se filtra el caso especial.
+function rangosInmediatosParteFraccion(nodo: Nodo): number[] {
+  if (nodo.tipo === 'suma') return [elegirRango(nodo.terminos.flatMap(rangosInmediatos))]
+  if (nodo.tipo === 'prod' && nodo.factores.length > 1) return [elegirRango(nodo.factores.flatMap(rangosInmediatos))]
+  return rangosInmediatos(nodo)
+}
+
+function rangoDeGrupo(nodo: Extract<Nodo, { tipo: 'grupo' }>): number {
+  return elegirRango(rangosInmediatos(nodo.expr))
+}
+
+// el rango elegido debe diferir (módulo 3) de TODOS los rangos inmediatos ya
+// usados adentro — no solo ser "uno más que el máximo", porque ese +1 puede
+// ciclar de vuelta a un símbolo que ya está usando una rama hermana más
+// plana. Se busca el primer rango disponible a partir de max+1.
+function elegirRango(inmediatos: number[]): number {
+  const usados = new Set(inmediatos.map((r) => ((r % 3) + 3) % 3))
+  let candidato = Math.max(-1, ...inmediatos) + 1
+  let vueltas = 0
+  while (usados.has(((candidato % 3) + 3) % 3) && vueltas < SIMBOLOS_AGRUPACION.length) {
+    candidato++
+    vueltas++
+  }
+  return candidato
+}
+
 function renderTermino(nodo: Nodo): { negativo: boolean; cuerpo: string } {
   switch (nodo.tipo) {
     case 'num':
@@ -139,7 +216,7 @@ function renderTermino(nodo: Nodo): { negativo: boolean; cuerpo: string } {
       return { negativo: false, cuerpo: nodo.exponente === 1 ? nombre : `${nombre}${aSuperindice(nodo.exponente)}` }
     }
     case 'grupo':
-      return { negativo: false, cuerpo: `(${renderizar(nodo.expr)})` }
+      return { negativo: false, cuerpo: envolver(renderizar(nodo.expr), rangoDeGrupo(nodo)) }
     case 'frac': {
       const denParte = renderFraccionParte(nodo.denominador)
       const numParte = renderFraccionParte(nodo.numerador)
@@ -176,11 +253,13 @@ function renderTermino(nodo: Nodo): { negativo: boolean; cuerpo: string } {
 // TODO eso es una sola parte de la fracción, no solo el último factor
 function renderFraccionParte(nodo: Nodo): { negativo: boolean; cuerpo: string } {
   if (nodo.tipo === 'suma') {
-    return { negativo: false, cuerpo: `(${renderizarSuma(nodo.terminos)})` }
+    const [rango] = rangosInmediatosParteFraccion(nodo)
+    return { negativo: false, cuerpo: envolver(renderizarSuma(nodo.terminos), rango) }
   }
   if (nodo.tipo === 'prod' && nodo.factores.length > 1) {
     const { negativo, cuerpo } = renderTermino(nodo)
-    return { negativo, cuerpo: `(${cuerpo})` }
+    const [rango] = rangosInmediatosParteFraccion(nodo)
+    return { negativo, cuerpo: envolver(cuerpo, rango) }
   }
   return renderTermino(nodo)
 }
