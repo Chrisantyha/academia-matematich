@@ -45,6 +45,11 @@ const TIPO_SEGUN_PLANTILLA: Record<TipoPlantilla, TipoRespuesta> = {
   trig_ecuacion_simple: 'numerica',
   trig_razones_triangulo: 'numerica',
   limite_raiz: 'numerica',
+  factorizacion_trinomio_lider: 'texto_algebraico',
+  factorizacion_agrupacion: 'texto_algebraico',
+  factorizacion_suma_cubos: 'texto_algebraico',
+  factorizacion_diferencia_cubos: 'texto_algebraico',
+  factorizacion_combinada: 'texto_algebraico',
 }
 
 const LABEL_TIPO_PLANTILLA: Record<TipoPlantilla, string> = {
@@ -67,6 +72,11 @@ const LABEL_TIPO_PLANTILLA: Record<TipoPlantilla, string> = {
   trig_ecuacion_simple: 'Ecuación trigonométrica simple',
   trig_razones_triangulo: 'Razones trigonométricas en triángulo rectángulo',
   limite_raiz: 'Límite con raíz (racionalización)',
+  factorizacion_trinomio_lider: 'Factorización de trinomio con coeficiente líder',
+  factorizacion_agrupacion: 'Factorización por agrupación',
+  factorizacion_suma_cubos: 'Factorización: suma de cubos',
+  factorizacion_diferencia_cubos: 'Factorización: diferencia de cubos',
+  factorizacion_combinada: 'Factorización combinada (varias técnicas)',
 }
 
 const OPCIONES_TIPO_PLANTILLA = (Object.entries(LABEL_TIPO_PLANTILLA) as [TipoPlantilla, string][]).map(
@@ -102,6 +112,11 @@ const DEFAULTS_PARAMETROS: Record<TipoPlantilla, Record<string, number>> = {
   trig_ecuacion_simple: { t_max: 3 },
   trig_razones_triangulo: { escala_max: 3 },
   limite_raiz: { p_min: -6, p_max: 6, k_min: 1, k_max: 8, a_min: -10, a_max: 10 },
+  factorizacion_trinomio_lider: { p_min: -5, p_max: 5, q_min: -10, q_max: 10, r_min: -5, r_max: 5, s_min: -10, s_max: 10 },
+  factorizacion_agrupacion: { p_min: -5, p_max: 5, q_min: -10, q_max: 10, r_min: -5, r_max: 5, s_min: -10, s_max: 10 },
+  factorizacion_suma_cubos: { k_min: 1, k_max: 4, m_min: -6, m_max: 6 },
+  factorizacion_diferencia_cubos: { k_min: 1, k_max: 4, m_min: -6, m_max: 6 },
+  factorizacion_combinada: { g_min: 2, g_max: 6, p_min: -5, p_max: 5, q_min: -8, q_max: 8, r_min: -5, r_max: 5, s_min: -8, s_max: 8 },
 }
 
 const CAMPOS_PARAMETROS: Record<TipoPlantilla, { clave: string; label: string }[]> = {
@@ -192,6 +207,33 @@ const CAMPOS_PARAMETROS: Record<TipoPlantilla, { clave: string; label: string }[
     { clave: 'p_min', label: 'Coeficiente p mínimo' }, { clave: 'p_max', label: 'Coeficiente p máximo' },
     { clave: 'k_min', label: 'k mínimo (raíz exacta resultante)' }, { clave: 'k_max', label: 'k máximo (raíz exacta resultante)' },
     { clave: 'a_min', label: 'Punto a mínimo' }, { clave: 'a_max', label: 'Punto a máximo' },
+  ],
+  factorizacion_trinomio_lider: [
+    { clave: 'p_min', label: 'Coeficiente líder p (binomio 1) mínimo' }, { clave: 'p_max', label: 'Coeficiente líder p (binomio 1) máximo' },
+    { clave: 'q_min', label: 'Constante q (binomio 1) mínima' }, { clave: 'q_max', label: 'Constante q (binomio 1) máxima' },
+    { clave: 'r_min', label: 'Coeficiente líder r (binomio 2) mínimo' }, { clave: 'r_max', label: 'Coeficiente líder r (binomio 2) máximo' },
+    { clave: 's_min', label: 'Constante s (binomio 2) mínima' }, { clave: 's_max', label: 'Constante s (binomio 2) máxima' },
+  ],
+  factorizacion_agrupacion: [
+    { clave: 'p_min', label: 'Coeficiente líder p (binomio 1) mínimo' }, { clave: 'p_max', label: 'Coeficiente líder p (binomio 1) máximo' },
+    { clave: 'q_min', label: 'Constante q (binomio 1) mínima' }, { clave: 'q_max', label: 'Constante q (binomio 1) máxima' },
+    { clave: 'r_min', label: 'Coeficiente líder r (binomio 2) mínimo' }, { clave: 'r_max', label: 'Coeficiente líder r (binomio 2) máximo' },
+    { clave: 's_min', label: 'Constante s (binomio 2) mínima' }, { clave: 's_max', label: 'Constante s (binomio 2) máxima' },
+  ],
+  factorizacion_suma_cubos: [
+    { clave: 'k_min', label: 'Coeficiente k mínimo' }, { clave: 'k_max', label: 'Coeficiente k máximo' },
+    { clave: 'm_min', label: 'Término m mínimo' }, { clave: 'm_max', label: 'Término m máximo' },
+  ],
+  factorizacion_diferencia_cubos: [
+    { clave: 'k_min', label: 'Coeficiente k mínimo' }, { clave: 'k_max', label: 'Coeficiente k máximo' },
+    { clave: 'm_min', label: 'Término m mínimo' }, { clave: 'm_max', label: 'Término m máximo' },
+  ],
+  factorizacion_combinada: [
+    { clave: 'g_min', label: 'Factor común g mínimo' }, { clave: 'g_max', label: 'Factor común g máximo' },
+    { clave: 'p_min', label: 'Coeficiente/raíz p mínimo' }, { clave: 'p_max', label: 'Coeficiente/raíz p máximo' },
+    { clave: 'q_min', label: 'Constante/raíz q mínima' }, { clave: 'q_max', label: 'Constante/raíz q máxima' },
+    { clave: 'r_min', label: 'Coeficiente líder r (si aplica) mínimo' }, { clave: 'r_max', label: 'Coeficiente líder r (si aplica) máximo' },
+    { clave: 's_min', label: 'Constante s (si aplica) mínima' }, { clave: 's_max', label: 'Constante s (si aplica) máxima' },
   ],
 }
 

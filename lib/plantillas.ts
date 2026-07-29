@@ -1,3 +1,7 @@
+import { Nodo, num, variable, potencia, suma, prod, renderizar } from './algebra/ast'
+import { aplicarMezcla } from './algebra/mezcla'
+import { rngPorDefecto } from './algebra/rng'
+
 export type TipoPlantilla =
   | 'ecuacion_lineal'
   | 'sistema_2x2'
@@ -18,6 +22,11 @@ export type TipoPlantilla =
   | 'trig_ecuacion_simple'
   | 'trig_razones_triangulo'
   | 'limite_raiz'
+  | 'factorizacion_trinomio_lider'
+  | 'factorizacion_agrupacion'
+  | 'factorizacion_suma_cubos'
+  | 'factorizacion_diferencia_cubos'
+  | 'factorizacion_combinada'
 
 export interface GeneracionPlantilla {
   preguntaTexto: string
@@ -86,6 +95,21 @@ function formatoSiguiente(coef: number, variable: string): string {
 // factor lineal dentro de "(x+3)" / "(x-3)"
 function formatoFactor(raiz: number): string {
   return raiz >= 0 ? `+${raiz}` : `${raiz}`
+}
+
+// como formatoSiguiente, pero sin espacios — para respuestas factorizadas
+// tipo "(3x+2)(x-4)" en vez de "(3x + 2)(x - 4)" (mismo estilo que formatoFactor)
+function formatoSiguienteTight(coef: number, variable: string): string {
+  if (coef === 0) return ''
+  const signo = coef < 0 ? '-' : '+'
+  const abs = Math.abs(coef)
+  const coefTexto = variable && abs === 1 ? '' : String(abs)
+  return `${signo}${coefTexto}${variable}`
+}
+
+// factor lineal con coeficiente líder dentro de "(3x+2)" / "(x-4)" / "(-x+5)"
+function formatoFactorLider(coef: number, constante: number): string {
+  return `${formatoPrimero(coef, 'x')}${formatoSiguienteTight(constante, '')}`
 }
 
 // ---------- superíndices (exponentes de x) ----------
@@ -353,6 +377,16 @@ function generarEcuacionLinealRadical(parametros: Record<string, number>): Gener
   }
 }
 
+// construye a·x² + b·x + c como Nodo (omitiendo términos con coeficiente 0) —
+// compartido por factorizacion_trinomio, factorizacion_trinomio_lider y
+// factorizacion_combinada
+function construirTrinomioNodo(a: number, b: number, c: number): Nodo {
+  const terminos: Nodo[] = [prod([num(a), potencia(variable('x'), 2)])]
+  if (b !== 0) terminos.push(prod([num(b), variable('x')]))
+  if (c !== 0) terminos.push(num(c))
+  return suma(terminos)
+}
+
 function generarFactorizacionTrinomio(parametros: Record<string, number>): GeneracionPlantilla {
   const pMin = requerido(parametros, 'p_min'), pMax = requerido(parametros, 'p_max')
   const qMin = requerido(parametros, 'q_min'), qMax = requerido(parametros, 'q_max')
@@ -374,9 +408,11 @@ function generarFactorizacionTrinomio(parametros: Record<string, number>): Gener
   const b = p + q
   const c = p * q
 
-  const terminoB = b === 0 ? '' : formatoSiguiente(b, 'x')
-  const terminoC = c === 0 ? '' : formatoSiguiente(c, '')
-  const preguntaTexto = `Factoriza: x²${terminoB}${terminoC}`
+  // el enunciado se arma como AST (no string directo) para poder pasar por
+  // el pipeline de disfraz de lib/algebra/ manteniendo la respuesta limpia
+  const nodoLimpio = construirTrinomioNodo(1, b, c)
+  const { nodo: nodoDisfrazado } = aplicarMezcla(nodoLimpio, rngPorDefecto)
+  const preguntaTexto = `Factoriza: ${renderizar(nodoDisfrazado)}`
 
   // p === q: trinomio cuadrado perfecto. Se guarda como (x±p)²; el normalizador
   // acepta también (x±p)(x±p) como equivalente (ver normalizarTextoAlgebraico).
@@ -519,6 +555,230 @@ function generarFactorizacionGrado34(parametros: Record<string, number>): Genera
   return {
     preguntaTexto,
     valoresGenerados: Object.fromEntries(raices.map((r, i) => [`raiz${i + 1}`, r])),
+    respuestaCorrecta,
+    tolerancia: 0,
+  }
+}
+
+// ---------- factorización: casos nuevos (líder, agrupación, cubos, combinado) ----------
+
+function generarFactorizacionTrinomioLider(parametros: Record<string, number>): GeneracionPlantilla {
+  const pMin = requerido(parametros, 'p_min'), pMax = requerido(parametros, 'p_max')
+  const qMin = requerido(parametros, 'q_min'), qMax = requerido(parametros, 'q_max')
+  const rMin = requerido(parametros, 'r_min'), rMax = requerido(parametros, 'r_max')
+  const sMin = requerido(parametros, 's_min'), sMax = requerido(parametros, 's_max')
+
+  let p = 0, q = 0, r = 0, s = 0
+  let encontrado = false
+  for (let i = 0; i < 200; i++) {
+    p = randIntNoCero(pMin, pMax)
+    q = randIntNoCero(qMin, qMax)
+    r = randIntNoCero(rMin, rMax)
+    s = randIntNoCero(sMin, sMax)
+    // |p·r| > 1: que el líder sea genuinamente distinto de 1 (si no, es el
+    // caso monic ya cubierto por factorizacion_trinomio)
+    if (Math.abs(p * r) > 1) {
+      encontrado = true
+      break
+    }
+  }
+  if (!encontrado) {
+    throw new Error('Parámetros inválidos: no se pudieron generar coeficientes líderes p,r con |p·r| > 1')
+  }
+
+  const a = p * r
+  const b = p * s + q * r
+  const c = q * s
+
+  const nodoLimpio = construirTrinomioNodo(a, b, c)
+  const { nodo: nodoDisfrazado } = aplicarMezcla(nodoLimpio, rngPorDefecto)
+  const preguntaTexto = `Factoriza: ${renderizar(nodoDisfrazado)}`
+
+  const respuestaCorrecta = `(${formatoFactorLider(p, q)})(${formatoFactorLider(r, s)})`
+
+  return {
+    preguntaTexto,
+    valoresGenerados: { p, q, r, s, a, b, c },
+    respuestaCorrecta,
+    tolerancia: 0,
+  }
+}
+
+function generarFactorizacionAgrupacion(parametros: Record<string, number>): GeneracionPlantilla {
+  const pMin = requerido(parametros, 'p_min'), pMax = requerido(parametros, 'p_max')
+  const qMin = requerido(parametros, 'q_min'), qMax = requerido(parametros, 'q_max')
+  const rMin = requerido(parametros, 'r_min'), rMax = requerido(parametros, 'r_max')
+  const sMin = requerido(parametros, 's_min'), sMax = requerido(parametros, 's_max')
+
+  let p = 0, q = 0, r = 0, s = 0
+  let encontrado = false
+  for (let i = 0; i < 200; i++) {
+    p = randIntNoCero(pMin, pMax)
+    q = randIntNoCero(qMin, qMax)
+    r = randIntNoCero(rMin, rMax)
+    s = randIntNoCero(sMin, sMax)
+    if (Math.abs(p * r) > 1) {
+      encontrado = true
+      break
+    }
+  }
+  if (!encontrado) {
+    throw new Error('Parámetros inválidos: no se pudieron generar coeficientes líderes p,r con |p·r| > 1')
+  }
+
+  const a = p * r
+  const c = q * s
+  // split determinístico (NO el split al azar de la técnica de disfraz
+  // "agrupacion" — ver diseño): con {p·s, q·r} agrupar en pares SIEMPRE
+  // produce factores comunes reales, porque viene directo de la factorización.
+  const terminoPS = p * s
+  const terminoQR = q * r
+
+  // 4 términos sin combinar, a propósito SIN pasar por aplicarMezcla: el
+  // enunciado en sí es la estructura pedagógica (lista para agrupar de a 2)
+  // y disfrazarla encima taparía esa señal.
+  const nodoEnunciado = suma([
+    prod([num(a), potencia(variable('x'), 2)]),
+    prod([num(terminoPS), variable('x')]),
+    prod([num(terminoQR), variable('x')]),
+    num(c),
+  ])
+  const preguntaTexto = `Factoriza agrupando: ${renderizar(nodoEnunciado)}`
+
+  const respuestaCorrecta = `(${formatoFactorLider(p, q)})(${formatoFactorLider(r, s)})`
+
+  return {
+    preguntaTexto,
+    valoresGenerados: { p, q, r, s, a, c, terminoPS, terminoQR },
+    respuestaCorrecta,
+    tolerancia: 0,
+  }
+}
+
+// a³+b³=(a+b)(a²-ab+b²) si signo=1 (suma); a³-b³=(a-b)(a²+ab+b²) si signo=-1
+// (diferencia), con a=kx, b=m. El target limpio k³x³ ± m³ ya nace de 2
+// términos (la identidad cancela los de grado 2 y 1 solita) — el mejor
+// candidato de las 5 plantillas nuevas para el pipeline de disfraz.
+function generarFactorizacionCubos(parametros: Record<string, number>, signo: 1 | -1): GeneracionPlantilla {
+  const kMin = requerido(parametros, 'k_min'), kMax = requerido(parametros, 'k_max')
+  const mMin = requerido(parametros, 'm_min'), mMax = requerido(parametros, 'm_max')
+
+  const k = randIntNoCero(kMin, kMax)
+  const m = randIntNoCero(mMin, mMax)
+
+  const k3 = k * k * k
+  const m3 = m * m * m
+
+  const nodoLimpio = suma([prod([num(k3), potencia(variable('x'), 3)]), num(signo * m3)])
+  const { nodo: nodoDisfrazado } = aplicarMezcla(nodoLimpio, rngPorDefecto)
+  const preguntaTexto = `Factoriza: ${renderizar(nodoDisfrazado)}`
+
+  const primerFactor = `(${formatoFactorLider(k, signo * m)})`
+  const segundoFactor = `(${formatoPrimero(k * k, 'x²')}${formatoSiguienteTight(-signo * k * m, 'x')}${formatoSiguienteTight(m * m, '')})`
+  const respuestaCorrecta = `${primerFactor}${segundoFactor}`
+
+  return {
+    preguntaTexto,
+    valoresGenerados: { k, m, k3, m3 },
+    respuestaCorrecta,
+    tolerancia: 0,
+  }
+}
+
+function generarFactorizacionSumaCubos(parametros: Record<string, number>): GeneracionPlantilla {
+  return generarFactorizacionCubos(parametros, 1)
+}
+
+function generarFactorizacionDiferenciaCubos(parametros: Record<string, number>): GeneracionPlantilla {
+  return generarFactorizacionCubos(parametros, -1)
+}
+
+// encadena 2 o 3 pasos al azar: factor común (g) + trinomio simple (2 pasos)
+// o factor común (g) + trinomio con coeficiente líder (3 pasos, ya que ese
+// último paso en sí requiere agrupación/AC-method). Reutiliza exactamente la
+// misma construcción de seed que factorizacion_trinomio y
+// factorizacion_trinomio_lider, solo escalada por g.
+function generarFactorizacionCombinada(parametros: Record<string, number>): GeneracionPlantilla {
+  const gMin = requerido(parametros, 'g_min'), gMax = requerido(parametros, 'g_max')
+  const pMin = requerido(parametros, 'p_min'), pMax = requerido(parametros, 'p_max')
+  const qMin = requerido(parametros, 'q_min'), qMax = requerido(parametros, 'q_max')
+  const rMin = requerido(parametros, 'r_min'), rMax = requerido(parametros, 'r_max')
+  const sMin = requerido(parametros, 's_min'), sMax = requerido(parametros, 's_max')
+
+  let g = 0
+  let encontradoG = false
+  for (let i = 0; i < 200; i++) {
+    g = randIntNoCero(gMin, gMax)
+    if (Math.abs(g) > 1) {
+      encontradoG = true
+      break
+    }
+  }
+  if (!encontradoG) {
+    throw new Error('Parámetros inválidos: no se pudo generar un factor común |g| > 1')
+  }
+
+  const tresPasos = randInt(0, 1) === 1
+
+  let aInner: number
+  let bInner: number
+  let cInner: number
+  let respuestaCorrecta: string
+  let valoresGenerados: Record<string, number>
+
+  if (tresPasos) {
+    let p = 0, q = 0, r = 0, s = 0
+    let encontrado = false
+    for (let i = 0; i < 200; i++) {
+      p = randIntNoCero(pMin, pMax)
+      q = randIntNoCero(qMin, qMax)
+      r = randIntNoCero(rMin, rMax)
+      s = randIntNoCero(sMin, sMax)
+      if (Math.abs(p * r) > 1) {
+        encontrado = true
+        break
+      }
+    }
+    if (!encontrado) {
+      throw new Error('Parámetros inválidos: no se pudieron generar coeficientes líderes p,r con |p·r| > 1')
+    }
+    aInner = p * r
+    bInner = p * s + q * r
+    cInner = q * s
+    respuestaCorrecta = `${g}(${formatoFactorLider(p, q)})(${formatoFactorLider(r, s)})`
+    valoresGenerados = { g, p, q, r, s, tresPasos: 1 }
+  } else {
+    let p = 0, q = 0
+    let encontrado = false
+    for (let i = 0; i < 200; i++) {
+      p = randIntNoCero(pMin, pMax)
+      q = randIntNoCero(qMin, qMax)
+      if (p !== q) {
+        encontrado = true
+        break
+      }
+    }
+    if (!encontrado) {
+      throw new Error('Parámetros inválidos: no se pudieron generar raíces distintas p,q')
+    }
+    aInner = 1
+    bInner = p + q
+    cInner = p * q
+    respuestaCorrecta = `${g}(x${formatoFactor(p)})(x${formatoFactor(q)})`
+    valoresGenerados = { g, p, q, tresPasos: 0 }
+  }
+
+  const a = g * aInner
+  const b = g * bInner
+  const c = g * cInner
+
+  const nodoLimpio = construirTrinomioNodo(a, b, c)
+  const { nodo: nodoDisfrazado } = aplicarMezcla(nodoLimpio, rngPorDefecto)
+  const preguntaTexto = `Factoriza: ${renderizar(nodoDisfrazado)}`
+
+  return {
+    preguntaTexto,
+    valoresGenerados: { ...valoresGenerados, a, b, c },
     respuestaCorrecta,
     tolerancia: 0,
   }
@@ -1068,6 +1328,11 @@ export function generarPlantilla(
     case 'trig_ecuacion_simple': return generarTrigEcuacionSimple(parametros)
     case 'trig_razones_triangulo': return generarTrigRazonesTriangulo(parametros)
     case 'limite_raiz': return generarLimiteRaiz(parametros)
+    case 'factorizacion_trinomio_lider': return generarFactorizacionTrinomioLider(parametros)
+    case 'factorizacion_agrupacion': return generarFactorizacionAgrupacion(parametros)
+    case 'factorizacion_suma_cubos': return generarFactorizacionSumaCubos(parametros)
+    case 'factorizacion_diferencia_cubos': return generarFactorizacionDiferenciaCubos(parametros)
+    case 'factorizacion_combinada': return generarFactorizacionCombinada(parametros)
     default:
       throw new Error(`Tipo de plantilla desconocido: ${tipo}`)
   }
