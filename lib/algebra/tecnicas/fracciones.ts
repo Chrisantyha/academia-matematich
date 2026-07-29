@@ -1,4 +1,4 @@
-import { Nodo, num, frac, prod, suma, coeficienteDeTermino } from '../ast'
+import { Nodo, num, frac, prod, suma, grupo, coeficienteDeTermino } from '../ast'
 import { Rng } from '../rng'
 import { terminosNoLideres, partesVariablesDe, partirEnDosNoNulos } from './util'
 
@@ -21,7 +21,7 @@ export function aplicableFracciones(nodo: Nodo): boolean {
 // sumar las fracciones para recuperar el coeficiente limpio.
 //
 // Antes:  x² + 3x + 5
-// Después: x² + 3x + 12/4 + 8/4     [n=4: 12/4 + 8/4 = 5]
+// Después: x² + 3x + (12/4 + 8/4)     [n=4: 12/4 + 8/4 = 5]
 export function fracciones(objetivo: Nodo, rng: Rng, opciones: OpcionesFracciones = {}): Nodo {
   if (objetivo.tipo !== 'suma') {
     throw new Error('fracciones: se esperaba un polinomio (nodo "suma")')
@@ -48,7 +48,19 @@ export function fracciones(objetivo: Nodo, rng: Rng, opciones: OpcionesFraccione
     return partes.length === 0 ? fraccion : prod([fraccion, ...partes])
   }
 
+  // a1 y a2 siempre comparten el signo de `total` (ver partirEnDosNoNulos):
+  // se factoriza ese signo común hacia afuera del grupo para que el renderer
+  // muestre un único "-" limpio en vez de dos fracciones negativas sueltas.
+  const signoComun = total < 0 ? -1 : 1
+  const grupoFracciones = prod([
+    num(signoComun),
+    grupo(suma([construir(a1 * signoComun), construir(a2 * signoComun)])),
+  ])
+
+  // Las dos fracciones quedan agrupadas como UN solo término (no sueltas en
+  // secuencia plana dentro de la suma del padre): sin esto, algo como
+  // "25/6x + 23/6x" se pierde entre el resto de los sumandos del polinomio.
   const nuevosTerminos = [...objetivo.terminos]
-  nuevosTerminos.splice(indiceOriginal, 1, construir(a1), construir(a2))
+  nuevosTerminos.splice(indiceOriginal, 1, grupoFracciones)
   return suma(nuevosTerminos)
 }

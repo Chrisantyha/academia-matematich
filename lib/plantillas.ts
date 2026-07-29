@@ -112,6 +112,27 @@ function formatoFactorLider(coef: number, constante: number): string {
   return `${formatoPrimero(coef, 'x')}${formatoSiguienteTight(constante, '')}`
 }
 
+// reduce un factor lineal "coef·x + constante" a su forma primitiva: extrae
+// cualquier entero común a ambos coeficientes como factor numérico aparte
+// (g), dejando gcd(|coef|,|constante|) = 1 adentro. Si ya era primitivo, no
+// cambia nada (g=1). El signo de g sigue al de `coef` para que el binomio
+// reducido quede con coeficiente líder positivo.
+function reducirBinomio(coef: number, constante: number): { g: number; coef: number; constante: number } {
+  const comun = gcd(coef, constante)
+  if (comun <= 1) return { g: 1, coef, constante }
+  const g = (coef < 0 ? -1 : 1) * comun
+  return { g, coef: coef / g, constante: constante / g }
+}
+
+// formatea un factor numérico al frente de un producto de binomios: 1 -> '',
+// -1 -> '-', cualquier otro entero -> su numeral (mismo criterio que ya usa
+// formatoPrimero para el coeficiente líder de un término)
+function formatoPrefijoNumerico(g: number): string {
+  if (g === 1) return ''
+  if (g === -1) return '-'
+  return `${g}`
+}
+
 // ---------- superíndices (exponentes de x) ----------
 
 const SUPERINDICES: Record<string, string> = {
@@ -594,7 +615,10 @@ function generarFactorizacionTrinomioLider(parametros: Record<string, number>): 
   const { nodo: nodoDisfrazado } = aplicarMezcla(nodoLimpio, rngPorDefecto)
   const preguntaTexto = `Factoriza: ${renderizar(nodoDisfrazado)}`
 
-  const respuestaCorrecta = `(${formatoFactorLider(p, q)})(${formatoFactorLider(r, s)})`
+  const f1 = reducirBinomio(p, q)
+  const f2 = reducirBinomio(r, s)
+  const prefijo = formatoPrefijoNumerico(f1.g * f2.g)
+  const respuestaCorrecta = `${prefijo}(${formatoFactorLider(f1.coef, f1.constante)})(${formatoFactorLider(f2.coef, f2.constante)})`
 
   return {
     preguntaTexto,
@@ -645,7 +669,10 @@ function generarFactorizacionAgrupacion(parametros: Record<string, number>): Gen
   ])
   const preguntaTexto = `Factoriza agrupando: ${renderizar(nodoEnunciado)}`
 
-  const respuestaCorrecta = `(${formatoFactorLider(p, q)})(${formatoFactorLider(r, s)})`
+  const f1 = reducirBinomio(p, q)
+  const f2 = reducirBinomio(r, s)
+  const prefijo = formatoPrefijoNumerico(f1.g * f2.g)
+  const respuestaCorrecta = `${prefijo}(${formatoFactorLider(f1.coef, f1.constante)})(${formatoFactorLider(f2.coef, f2.constante)})`
 
   return {
     preguntaTexto,
@@ -673,9 +700,17 @@ function generarFactorizacionCubos(parametros: Record<string, number>, signo: 1 
   const { nodo: nodoDisfrazado } = aplicarMezcla(nodoLimpio, rngPorDefecto)
   const preguntaTexto = `Factoriza: ${renderizar(nodoDisfrazado)}`
 
-  const primerFactor = `(${formatoFactorLider(k, signo * m)})`
-  const segundoFactor = `(${formatoPrimero(k * k, 'x²')}${formatoSiguienteTight(-signo * k * m, 'x')}${formatoSiguienteTight(m * m, '')})`
-  const respuestaCorrecta = `${primerFactor}${segundoFactor}`
+  // (k,m) puede compartir un factor común (gcd>1): se reduce el binomio
+  // (kx + signo·m) a su forma primitiva y el cubo del factor extraído (g³)
+  // sale al frente — el segundo factor (cuadrático) hereda exactamente ese
+  // mismo g² porque k²,km,m² son todos divisibles por g² cuando k=g·k1 y
+  // signo·m=g·c1.
+  const binomioReducido = reducirBinomio(k, signo * m)
+  const { g, coef: k1, constante: c1 } = binomioReducido
+  const prefijo = formatoPrefijoNumerico(g * g * g)
+  const primerFactor = `(${formatoFactorLider(k1, c1)})`
+  const segundoFactor = `(${formatoPrimero(k1 * k1, 'x²')}${formatoSiguienteTight(-k1 * c1, 'x')}${formatoSiguienteTight(c1 * c1, '')})`
+  const respuestaCorrecta = `${prefijo}${primerFactor}${segundoFactor}`
 
   return {
     preguntaTexto,
@@ -745,7 +780,10 @@ function generarFactorizacionCombinada(parametros: Record<string, number>): Gene
     aInner = p * r
     bInner = p * s + q * r
     cInner = q * s
-    respuestaCorrecta = `${g}(${formatoFactorLider(p, q)})(${formatoFactorLider(r, s)})`
+    const f1 = reducirBinomio(p, q)
+    const f2 = reducirBinomio(r, s)
+    const prefijo = formatoPrefijoNumerico(g * f1.g * f2.g)
+    respuestaCorrecta = `${prefijo}(${formatoFactorLider(f1.coef, f1.constante)})(${formatoFactorLider(f2.coef, f2.constante)})`
     valoresGenerados = { g, p, q, r, s, tresPasos: 1 }
   } else {
     let p = 0, q = 0
