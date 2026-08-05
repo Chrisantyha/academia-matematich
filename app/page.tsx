@@ -1,17 +1,31 @@
 import Link from 'next/link'
 import Navbar from '@/components/layout/Navbar'
+import Latex from '@/components/ui/Latex'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
 
-
-const cursos = [
-  { icono: '∫', tag: 'Calculo I', nombre: 'Calculo Diferencial desde cero', lecciones: 48, precio: '$9' },
-  { icono: 'A', tag: 'Algebra Lineal', nombre: 'Matrices y Sistemas de Ecuaciones', lecciones: 42, precio: '$9' },
-  { icono: 'S', tag: 'Calculo II', nombre: 'Calculo Integral y Series', lecciones: 51, precio: '$9' },
-  { icono: 'F', tag: 'Fisica I', nombre: 'Mecanica Clasica', lecciones: 38, precio: '$9' },
-  { icono: 'D', tag: 'Calculo III', nombre: 'Calculo Multivariable', lecciones: 44, precio: '$9' },
-  { icono: 'P', tag: 'Algebra', nombre: 'Funciones y Polinomios', lecciones: 36, precio: '$9' },
+const formulasTicker = [
+  'F = ma',
+  'E = mc^2',
+  'a^2 + b^2 = c^2',
+  '\\lim_{x \\to 0} \\frac{\\sin(x)}{x} = 1',
+  '\\frac{d}{dx} e^x = e^x',
+  '\\det(A) = 0',
+  '\\int_0^\\infty e^{-x^2}\\,dx = \\frac{\\sqrt{\\pi}}{2}',
+  '\\nabla \\cdot \\vec{E} = \\frac{\\rho}{\\varepsilon_0}',
 ]
 
-export default function Home() {
+export default async function Home() {
+  const supabase = await createServerSupabaseClient()
+
+  const { data: cursos } = await supabase
+    .from('cursos')
+    .select('*')
+    .eq('estado', 'publicado')
+    .order('created_at', { ascending: false })
+    .limit(6)
+
+  const totalCursos = cursos?.length || 0
+
   return (
     <main className="min-h-screen bg-slate-950">
 
@@ -35,8 +49,6 @@ export default function Home() {
           No memorizas: <strong className="text-white">entiendes</strong>.
         </p>
 
-        
-
         <div className="flex gap-4 flex-wrap justify-center mb-16">
           <Link href="/cursos" className="bg-yellow-500 text-black font-bold px-8 py-4 rounded-xl hover:bg-yellow-400 transition-all">
             Ver cursos
@@ -48,7 +60,7 @@ export default function Home() {
 
         <div className="flex gap-12 flex-wrap justify-center">
           <div className="text-center">
-            <div className="text-4xl font-bold text-yellow-500">12+</div>
+            <div className="text-4xl font-bold text-yellow-500">{totalCursos}</div>
             <div className="text-sm text-slate-600 mt-1">Cursos</div>
           </div>
           <div className="text-center">
@@ -68,13 +80,15 @@ export default function Home() {
       </section>
 
       <div className="overflow-hidden border-y border-slate-800 bg-slate-900 py-3">
-        <div className="flex gap-12 whitespace-nowrap">
-          <span className="font-mono text-sm text-slate-600">F = ma</span>
-          <span className="font-mono text-sm text-yellow-500">E = mc2</span>
-          <span className="font-mono text-sm text-slate-600">a2 + b2 = c2</span>
-          <span className="font-mono text-sm text-yellow-500">lim sin(x)/x = 1</span>
-          <span className="font-mono text-sm text-slate-600">d/dx ex = ex</span>
-          <span className="font-mono text-sm text-yellow-500">det(A) = 0</span>
+        <div className="flex gap-16 whitespace-nowrap animate-ticker w-max">
+          {[...formulasTicker, ...formulasTicker].map((formula, index) => (
+            <span
+              key={index}
+              className={`text-sm ${index % 2 === 0 ? 'text-slate-500' : 'text-yellow-500'}`}
+            >
+              <Latex formula={formula} />
+            </span>
+          ))}
         </div>
       </div>
 
@@ -85,23 +99,35 @@ export default function Home() {
           <Link href="/cursos" className="text-sm text-yellow-500 font-semibold">Ver todos</Link>
         </div>
 
-        <div className="flex gap-4 overflow-x-auto pb-3">
-          {cursos.map((c) => (
-            <div key={c.nombre} className="flex-shrink-0 w-52 bg-slate-900 border border-slate-800 rounded-xl overflow-hidden cursor-pointer hover:-translate-y-1 transition-all">
-              <div className="h-28 bg-slate-800 flex items-center justify-center text-5xl">
-                {c.icono}
-              </div>
-              <div className="p-3">
-                <div className="text-yellow-500 text-xs font-bold uppercase tracking-widest mb-1">{c.tag}</div>
-                <div className="text-sm font-semibold text-white leading-snug mb-3">{c.nombre}</div>
-                <div className="flex items-center justify-between">
-                  <span className="text-yellow-500 font-bold">{c.precio}</span>
-                  <span className="text-slate-500 text-xs">{c.lecciones} lec.</span>
+        {totalCursos === 0 ? (
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center">
+            <div className="text-5xl mb-4">🎬</div>
+            <h3 className="text-lg font-bold text-white mb-2">Proximamente</h3>
+            <p className="text-slate-400 text-sm">Estamos preparando los primeros cursos. Vuelve pronto.</p>
+          </div>
+        ) : (
+          <div className="flex gap-4 overflow-x-auto pb-3">
+            {cursos!.map((c: any) => (
+              <Link
+                key={c.id}
+                href={`/cursos/${c.id}`}
+                className="flex-shrink-0 w-52 bg-slate-900 border border-slate-800 rounded-xl overflow-hidden cursor-pointer hover:-translate-y-1 transition-all"
+              >
+                <div className="h-28 bg-slate-800 flex items-center justify-center text-5xl">
+                  📚
                 </div>
-              </div>
-            </div>
-          ))}
-        </div>
+                <div className="p-3">
+                  <div className="text-yellow-500 text-xs font-bold uppercase tracking-widest mb-1">{c.categoria}</div>
+                  <div className="text-sm font-semibold text-white leading-snug mb-3">{c.titulo}</div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-yellow-500 font-bold">${c.precio}</span>
+                    <span className="text-slate-500 text-xs">{c.nivel}</span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
 
       </section>
 
