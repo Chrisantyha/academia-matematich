@@ -11,6 +11,7 @@ interface VideoUploadProps {
 }
 
 export default function VideoUpload({ cursoId, moduloId, orden, onSuccess }: VideoUploadProps) {
+  const [tipo, setTipo] = useState<'video' | 'pdf'>('video')
   const [uploading, setUploading] = useState(false)
   const [progreso, setProgreso] = useState(0)
   const [error, setError] = useState('')
@@ -49,7 +50,63 @@ export default function VideoUpload({ cursoId, moduloId, orden, onSuccess }: Vid
     })
   }
 
+  async function handleUploadPdf() {
+    if (!archivo) {
+      setError('Selecciona un PDF primero')
+      return
+    }
+    if (!titulo) {
+      setError('Escribe el titulo de la leccion')
+      return
+    }
+
+    setUploading(true)
+    setError('')
+    setProgreso(20)
+
+    try {
+      const formData = new FormData()
+      formData.append('archivo', archivo)
+      formData.append('titulo', titulo)
+      formData.append('cursoId', cursoId)
+      formData.append('moduloId', moduloId || '')
+      formData.append('orden', String(orden || 1))
+      formData.append('esGratis', String(esGratis))
+
+      setProgreso(50)
+
+      const respuesta = await fetch('/api/upload-pdf', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const datos = await respuesta.json()
+
+      if (!datos.ok) {
+        setError(datos.error || 'Error al subir el material. Intenta de nuevo.')
+        setUploading(false)
+        return
+      }
+
+      setProgreso(100)
+      onSuccess(datos.leccionId)
+      setTitulo('')
+      setArchivo(null)
+      setProgreso(0)
+
+    } catch (err) {
+      setError('Error de conexion. Intenta de nuevo.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
   async function handleUpload() {
+    if (tipo === 'pdf') {
+      await handleUploadPdf()
+      return
+    }
+
     if (!archivo) {
       setError('Selecciona un video primero')
       return
@@ -129,6 +186,31 @@ export default function VideoUpload({ cursoId, moduloId, orden, onSuccess }: Vid
     <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
       <h4 className="text-sm font-bold mb-4">Subir nueva leccion</h4>
 
+      <div className="mb-4 flex gap-2 bg-slate-900 border border-slate-700 rounded-xl p-1">
+        <button
+          type="button"
+          onClick={() => { setTipo('video'); setArchivo(null); setError('') }}
+          className={`flex-1 text-sm font-semibold py-2 rounded-lg transition-colors ${
+            tipo === 'video'
+              ? 'bg-yellow-500 text-black'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          🎬 Video
+        </button>
+        <button
+          type="button"
+          onClick={() => { setTipo('pdf'); setArchivo(null); setError('') }}
+          className={`flex-1 text-sm font-semibold py-2 rounded-lg transition-colors ${
+            tipo === 'pdf'
+              ? 'bg-yellow-500 text-black'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          📄 Solo material (PDF)
+        </button>
+      </div>
+
       <div className="mb-4">
         <label className="block text-sm font-semibold text-slate-300 mb-2">
           Titulo de la leccion
@@ -158,19 +240,19 @@ export default function VideoUpload({ cursoId, moduloId, orden, onSuccess }: Vid
         <label className="block border-2 border-dashed border-slate-600 rounded-xl p-6 text-center hover:border-yellow-500/50 transition-colors cursor-pointer">
           <input
             type="file"
-            accept="video/*"
+            accept={tipo === 'video' ? 'video/*' : 'application/pdf'}
             onChange={handleArchivo}
             className="hidden"
           />
           {archivo ? (
             <div>
-              <div className="text-3xl mb-2">🎬</div>
+              <div className="text-3xl mb-2">{tipo === 'video' ? '🎬' : '📄'}</div>
               <div className="text-white font-semibold text-sm">{archivo.name}</div>
               <div className="text-slate-500 text-xs mt-1">
                 {(archivo.size / 1024 / 1024).toFixed(2)} MB
               </div>
             </div>
-          ) : (
+          ) : tipo === 'video' ? (
             <div>
               <div className="text-3xl mb-2">☁️</div>
               <div className="text-slate-400 text-sm">
@@ -178,6 +260,15 @@ export default function VideoUpload({ cursoId, moduloId, orden, onSuccess }: Vid
                 <span className="text-yellow-500 font-semibold">haz click para seleccionar</span>
               </div>
               <div className="text-slate-600 text-xs mt-1">MP4 · maximo 4GB</div>
+            </div>
+          ) : (
+            <div>
+              <div className="text-3xl mb-2">☁️</div>
+              <div className="text-slate-400 text-sm">
+                Arrastra tu PDF o{' '}
+                <span className="text-yellow-500 font-semibold">haz click para seleccionar</span>
+              </div>
+              <div className="text-slate-600 text-xs mt-1">PDF</div>
             </div>
           )}
         </label>
@@ -192,7 +283,7 @@ export default function VideoUpload({ cursoId, moduloId, orden, onSuccess }: Vid
       {uploading && (
         <div className="mb-4">
           <div className="flex justify-between text-xs text-slate-400 mb-1">
-            <span>Subiendo video...</span>
+            <span>{tipo === 'video' ? 'Subiendo video...' : 'Subiendo material...'}</span>
             <span>{progreso}%</span>
           </div>
           <div className="h-2 bg-slate-700 rounded-full overflow-hidden">

@@ -7,7 +7,8 @@ import { useRouter } from 'next/navigation'
 interface Leccion {
   id: string
   titulo: string
-  video_url: string
+  video_url: string | null
+  pdf_url: string | null
   duracion_minutos: number
   es_gratis: boolean
   orden: number
@@ -35,6 +36,7 @@ export default function LeccionPlayer({ lecciones, modulos, cursoId, progresoIni
   const [completadas, setCompletadas] = useState<string[]>(progresoInicial)
   const [guardando, setGuardando] = useState(false)
   const [generandoCert, setGenerandoCert] = useState(false)
+  const [descargando, setDescargando] = useState(false)
 
   const porcentaje = Math.round((completadas.length / lecciones.length) * 100)
 
@@ -79,6 +81,23 @@ export default function LeccionPlayer({ lecciones, modulos, cursoId, progresoIni
     }
   }
 
+  async function descargarPdf() {
+    setDescargando(true)
+    try {
+      const response = await fetch(`/api/lecciones/${leccionActual.id}/pdf`)
+      const data = await response.json()
+      if (data.ok) {
+        window.open(data.url, '_blank')
+      } else {
+        alert(data.error || 'No se pudo obtener el material')
+      }
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setDescargando(false)
+    }
+  }
+
   function moduloCompletado(modulo: Modulo) {
     if (!modulo.lecciones || modulo.lecciones.length === 0) return false
     return modulo.lecciones.every(l => completadas.includes(l.id))
@@ -89,10 +108,29 @@ export default function LeccionPlayer({ lecciones, modulos, cursoId, progresoIni
 
       {/* PLAYER */}
       <div className="lg:col-span-2">
-        <VideoPlayer
-          videoId={leccionActual.video_url}
-          titulo={leccionActual.titulo}
-        />
+        {leccionActual.video_url ? (
+          <VideoPlayer
+            videoId={leccionActual.video_url}
+            titulo={leccionActual.titulo}
+          />
+        ) : (
+          <div className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center">
+            <div className="text-5xl mb-4">📄</div>
+            <h3 className="font-bold mb-1">Esta leccion es solo material</h3>
+            <p className="text-slate-400 text-sm mb-6">
+              No tiene video, descarga el PDF para ver los ejercicios.
+            </p>
+            {leccionActual.pdf_url && (
+              <button
+                onClick={descargarPdf}
+                disabled={descargando}
+                className="bg-yellow-500 text-black font-bold px-8 py-3 rounded-xl hover:bg-yellow-400 transition-colors disabled:opacity-50"
+              >
+                {descargando ? 'Abriendo...' : '📄 Descargar material PDF'}
+              </button>
+            )}
+          </div>
+        )}
 
         <div className="mt-4 flex items-center justify-between flex-wrap gap-3">
           <div>
@@ -101,21 +139,32 @@ export default function LeccionPlayer({ lecciones, modulos, cursoId, progresoIni
               Leccion {leccionActual.orden} · {leccionActual.duracion_minutos} min
             </p>
           </div>
-          <button
-            onClick={marcarCompletada}
-            disabled={completadas.includes(leccionActual.id) || guardando}
-            className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-colors ${
-              completadas.includes(leccionActual.id)
-                ? 'bg-green-500/10 text-green-400 border border-green-500/30 cursor-default'
-                : 'bg-yellow-500 text-black hover:bg-yellow-400'
-            }`}
-          >
-            {completadas.includes(leccionActual.id)
-              ? '✓ Completada'
-              : guardando
-              ? 'Guardando...'
-              : 'Marcar como completada'}
-          </button>
+          <div className="flex items-center gap-3">
+            {leccionActual.video_url && leccionActual.pdf_url && (
+              <button
+                onClick={descargarPdf}
+                disabled={descargando}
+                className="border border-slate-600 text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-slate-700 transition-colors text-sm disabled:opacity-50"
+              >
+                {descargando ? 'Abriendo...' : '📄 Descargar material PDF'}
+              </button>
+            )}
+            <button
+              onClick={marcarCompletada}
+              disabled={completadas.includes(leccionActual.id) || guardando}
+              className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-colors ${
+                completadas.includes(leccionActual.id)
+                  ? 'bg-green-500/10 text-green-400 border border-green-500/30 cursor-default'
+                  : 'bg-yellow-500 text-black hover:bg-yellow-400'
+              }`}
+            >
+              {completadas.includes(leccionActual.id)
+                ? '✓ Completada'
+                : guardando
+                ? 'Guardando...'
+                : 'Marcar como completada'}
+            </button>
+          </div>
         </div>
 
         {/* PROGRESO */}

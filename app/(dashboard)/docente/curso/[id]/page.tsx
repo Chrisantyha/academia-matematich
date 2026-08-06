@@ -19,7 +19,8 @@ interface Modulo {
 interface Leccion {
   id: string
   titulo: string
-  video_url: string
+  video_url: string | null
+  pdf_url: string | null
   duracion_minutos: number
   orden: number
   es_gratis: boolean
@@ -506,7 +507,15 @@ export default function GestionarCursoPage() {
                             .map((leccion) => (
                             <div key={leccion.id} className="flex items-center gap-3 py-2 border-b border-slate-800 last:border-0">
                               <span className="text-slate-500 text-xs font-mono w-6">{leccion.orden}</span>
-                              <span className="text-sm flex-1">{leccion.titulo}</span>
+                              <span className="text-sm flex-1">
+                                {leccion.titulo}
+                                {leccion.video_url && (
+                                  <span title="Tiene video" className="ml-2">🎬</span>
+                                )}
+                                {leccion.pdf_url && (
+                                  <span title="Tiene material PDF" className="ml-2">📄</span>
+                                )}
+                              </span>
                               {leccion.es_gratis && (
                                 <span className="text-xs text-green-400 bg-green-500/10 px-2 py-0.5 rounded">Gratis</span>
                               )}
