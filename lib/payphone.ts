@@ -22,7 +22,16 @@ export function consultarPayphone(clientTransactionId: string): Promise<any> {
       res.on('data', (chunk) => { responseData += chunk })
       res.on('end', () => {
         try {
-          resolve(JSON.parse(responseData))
+          const parsed = JSON.parse(responseData)
+          // API Sale devuelve la transaccion envuelta en un arreglo (a
+          // diferencia del Boton de Pago), asi que se desenvuelve aca para
+          // que el resto del codigo pueda seguir leyendo resultado.campo
+          // directo sin saber de este detalle.
+          if (Array.isArray(parsed)) {
+            resolve(parsed[0] ?? {})
+          } else {
+            resolve(parsed)
+          }
         } catch {
           resolve({ error: responseData })
         }
