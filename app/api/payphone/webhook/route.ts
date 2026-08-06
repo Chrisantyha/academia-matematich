@@ -18,14 +18,21 @@ export async function POST(request: Request) {
   try {
     // El body de este POST puede ser falsificado por cualquiera (no hay firma
     // ni secreto de webhook), asi que de aca solo se usan ClientTransactionId
-    // (para saber que compra buscar) y StoreId (chequeo minimo existente). El
-    // resto de campos -- TransactionStatus, Amount, AuthorizationCode,
-    // TransactionId -- se ignoran y se vuelven a pedir server-to-server con
-    // consultarPayphone antes de aprobar nada.
-    const { ClientTransactionId, StoreId } = body ?? {}
+    // y TransactionId como claves para consultar a PayPhone (POST /Confirm
+    // exige ambos: { id, clientTxId }), mas StoreId (chequeo minimo
+    // existente). El resto de campos -- TransactionStatus, Amount,
+    // AuthorizationCode -- se ignoran y se vuelven a pedir server-to-server
+    // con consultarPayphone antes de aprobar nada.
+    const { ClientTransactionId, StoreId, TransactionId } = body ?? {}
 
-    if (!ClientTransactionId || !StoreId) {
+    if (!ClientTransactionId || !StoreId || TransactionId === undefined || TransactionId === null || TransactionId === '') {
       console.error('PayPhone webhook: faltan campos requeridos', body)
+      return NextResponse.json({ Response: false, ErrorCode: '444' })
+    }
+
+    const transactionIdBody = Number(TransactionId)
+    if (!Number.isFinite(transactionIdBody)) {
+      console.error('PayPhone webhook: TransactionId no es numérico', TransactionId)
       return NextResponse.json({ Response: false, ErrorCode: '444' })
     }
 
@@ -57,14 +64,14 @@ export async function POST(request: Request) {
     // backend usando PAYPHONE_TOKEN.
     let resultado: any
     try {
-      resultado = await consultarPayphone(ClientTransactionId)
+      resultado = await consultarPayphone(transactionIdBody, ClientTransactionId)
     } catch (err) {
       console.error('PayPhone webhook: error consultando a PayPhone', err)
       return NextResponse.json({ Response: false, ErrorCode: '222' })
     }
     console.log('PayPhone webhook: verificacion server-to-server', resultado)
 
-    const estadoVerificado = resultado?.transactionStatus || resultado?.status
+    const estadoVerificado = resultado?.transactionStatus
 
     if (estadoVerificado !== 'Approved') {
       const { error: rechazoError } = await supabase
@@ -79,14 +86,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ Response: true, ErrorCode: '000' })
     }
 
-    // El formato exacto de la respuesta de /Confirm no esta confirmado
-    // (camelCase vs PascalCase), asi que se revisan ambas variantes. Estos
-    // tres campos son los que se van a guardar como verdad -- si ninguna
-    // variante viene definida no se asume ningun valor por defecto y se
-    // rechaza la aprobación.
-    const amountVerificado = resultado?.amount ?? resultado?.Amount
-    const authorizationCodeVerificado = resultado?.authorizationCode ?? resultado?.AuthorizationCode
-    const transactionIdVerificado = resultado?.transactionId ?? resultado?.TransactionId
+    // Segun la documentacion oficial de PayPhone, la respuesta exitosa de
+    // /Confirm usa estos campos en camelCase (amount, authorizationCode,
+    // transactionId, transactionStatus, ...). Estos tres son los que se van
+    // a guardar como verdad -- si falta alguno no se asume ningun valor por
+    // defecto y se rechaza la aprobación.
+    const amountVerificado = resultado?.amount
+    const authorizationCodeVerificado = resultado?.authorizationCode
+    const transactionIdVerificado = resultado?.transactionId
 
     if (
       amountVerificado === undefined || amountVerificado === null ||

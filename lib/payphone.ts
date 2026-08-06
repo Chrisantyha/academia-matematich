@@ -2,9 +2,9 @@ import https from 'https'
 
 const PAYPHONE_TOKEN = process.env.PAYPHONE_TOKEN
 
-export function consultarPayphone(clientTransactionId: string): Promise<any> {
+export function consultarPayphone(transactionId: number, clientTransactionId: string): Promise<any> {
   return new Promise((resolve, reject) => {
-    const data = JSON.stringify({ clientTxId: clientTransactionId })
+    const data = JSON.stringify({ id: transactionId, clientTxId: clientTransactionId })
 
     const options = {
       hostname: 'pay.payphonetodoesposible.com',

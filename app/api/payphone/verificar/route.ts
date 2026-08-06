@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     // Buscar la compra pendiente del alumno
     const { data: compra } = await supabase
       .from('compras')
-      .select('id, payphone_transaction_id')
+      .select('id, payphone_transaction_id, payphone_numeric_id')
       .eq('alumno_id', user.id)
       .eq('curso_id', cursoId)
       .eq('estado', 'pendiente')
@@ -31,10 +31,23 @@ export async function POST(request: Request) {
       })
     }
 
+    // POST /Confirm exige el id numerico de PayPhone ademas del
+    // clientTransactionId, y ese numero recien lo conocemos cuando llega el
+    // webhook (app/api/payphone/webhook/route.ts) -- mientras la compra siga
+    // 'pendiente' no lo tenemos todavia, asi que no hay nada que consultar.
+    // TODO: limitacion estructural, ver conversación -- no resuelto aún.
+    if (compra.payphone_numeric_id === null || compra.payphone_numeric_id === undefined) {
+      return NextResponse.json({
+        ok: false,
+        error: 'El pago aun no ha sido confirmado',
+        estado: 'Desconocido',
+      })
+    }
+
     console.log('Consultando transaccion:', compra.payphone_transaction_id)
 
     // Consultar el estado en PayPhone
-    const resultado = await consultarPayphone(compra.payphone_transaction_id)
+    const resultado = await consultarPayphone(Number(compra.payphone_numeric_id), compra.payphone_transaction_id)
     console.log('Respuesta PayPhone:', JSON.stringify(resultado))
 
     const estado = resultado.transactionStatus || resultado.status
