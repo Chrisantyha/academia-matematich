@@ -56,7 +56,7 @@ export default function VideoUpload({ cursoId, moduloId, orden, onSuccess }: Vid
       return
     }
     if (!titulo) {
-      setError('Escribe el titulo de la leccion')
+      setError('Escribe el título de la lección')
       return
     }
 
@@ -95,7 +95,7 @@ export default function VideoUpload({ cursoId, moduloId, orden, onSuccess }: Vid
       setProgreso(0)
 
     } catch (err) {
-      setError('Error de conexion. Intenta de nuevo.')
+      setError('Error de conexión. Intenta de nuevo.')
     } finally {
       setUploading(false)
     }
@@ -112,7 +112,7 @@ export default function VideoUpload({ cursoId, moduloId, orden, onSuccess }: Vid
       return
     }
     if (!titulo) {
-      setError('Escribe el titulo de la leccion')
+      setError('Escribe el título de la lección')
       return
     }
 
@@ -164,7 +164,7 @@ export default function VideoUpload({ cursoId, moduloId, orden, onSuccess }: Vid
       const datosGuardado = await guardado.json()
 
       if (!datosGuardado.ok) {
-        setError('El video se subio pero no se pudo guardar la leccion. Contacta soporte.')
+        setError('El video se subió pero no se pudo guardar la lección. Contacta soporte.')
         setUploading(false)
         return
       }
@@ -176,7 +176,7 @@ export default function VideoUpload({ cursoId, moduloId, orden, onSuccess }: Vid
       setProgreso(0)
 
     } catch (err) {
-      setError('Error de conexion. Intenta de nuevo.')
+      setError('Error de conexión. Intenta de nuevo.')
     } finally {
       setUploading(false)
     }
@@ -184,7 +184,7 @@ export default function VideoUpload({ cursoId, moduloId, orden, onSuccess }: Vid
 
   return (
     <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
-      <h4 className="text-sm font-bold mb-4">Subir nueva leccion</h4>
+      <h4 className="text-sm font-bold mb-4">Subir nueva lección</h4>
 
       <div className="mb-4 flex gap-2 bg-slate-900 border border-slate-700 rounded-xl p-1">
         <button
@@ -213,13 +213,13 @@ export default function VideoUpload({ cursoId, moduloId, orden, onSuccess }: Vid
 
       <div className="mb-4">
         <label className="block text-sm font-semibold text-slate-300 mb-2">
-          Titulo de la leccion
+          Título de la lección
         </label>
         <input
           type="text"
           value={titulo}
           onChange={(e) => setTitulo(e.target.value)}
-          placeholder="Ej: Introduccion a los limites"
+          placeholder="Ej: Introducción a los límites"
           className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-yellow-500 transition-colors"
         />
       </div>
@@ -232,7 +232,7 @@ export default function VideoUpload({ cursoId, moduloId, orden, onSuccess }: Vid
             onChange={(e) => setEsGratis(e.target.checked)}
             className="w-4 h-4 accent-yellow-500"
           />
-          <span className="text-sm text-slate-300">Esta leccion es gratis (visible sin comprar)</span>
+          <span className="text-sm text-slate-300">Esta lección es gratis (visible sin comprar)</span>
         </label>
       </div>
 
@@ -259,7 +259,7 @@ export default function VideoUpload({ cursoId, moduloId, orden, onSuccess }: Vid
                 Arrastra tu video o{' '}
                 <span className="text-yellow-500 font-semibold">haz click para seleccionar</span>
               </div>
-              <div className="text-slate-600 text-xs mt-1">MP4 · maximo 4GB</div>
+              <div className="text-slate-600 text-xs mt-1">MP4 · máximo 4GB</div>
             </div>
           ) : (
             <div>
@@ -301,7 +301,7 @@ export default function VideoUpload({ cursoId, moduloId, orden, onSuccess }: Vid
           disabled={uploading}
           className="bg-yellow-500 text-black font-bold px-6 py-2.5 rounded-xl hover:bg-yellow-400 transition-colors text-sm disabled:opacity-50"
         >
-          {uploading ? 'Subiendo...' : 'Subir leccion'}
+          {uploading ? 'Subiendo...' : 'Subir lección'}
         </button>
         <button
           onClick={() => { setArchivo(null); setTitulo('') }}

@@ -33,13 +33,13 @@ export default function CursosPage() {
       <div className="pt-28 pb-12 px-8 border-b border-slate-800">
         <div className="max-w-6xl mx-auto">
           <div className="text-xs font-bold uppercase tracking-widest text-yellow-500 mb-3">
-            Catalogo completo
+            Catálogo completo
           </div>
           <h1 className="text-4xl font-bold tracking-tight mb-3">
             Todos los cursos
           </h1>
           <p className="text-slate-400 max-w-xl">
-            Ciencias exactas explicadas desde la raiz. Elige tu curso y empieza hoy.
+            Ciencias exactas explicadas desde la raíz. Elige tu curso y empieza hoy.
           </p>
         </div>
       </div>
@@ -73,9 +73,9 @@ export default function CursosPage() {
           <div className="text-center py-24">
             <div className="text-5xl mb-4">📚</div>
             <h2 className="text-xl font-bold mb-2">
-              {filtro === 'Todos' ? 'Aun no hay cursos publicados' : `No hay cursos de ${filtro}`}
+              {filtro === 'Todos' ? 'Aún no hay cursos publicados' : `No hay cursos de ${filtro}`}
             </h2>
-            <p className="text-slate-400 text-sm">Los cursos apareceran aqui pronto.</p>
+            <p className="text-slate-400 text-sm">Los cursos aparecerán aquí pronto.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -121,7 +121,7 @@ export default function CursosPage() {
         {/* CTA SUSCRIPCION */}
         <div className="mt-16 bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center">
           <h2 className="text-2xl font-bold mb-2">Accede a todos los cursos</h2>
-          <p className="text-slate-400 mb-6">Suscribete y estudia sin limites por un precio fijo al mes.</p>
+          <p className="text-slate-400 mb-6">Suscríbete y estudia sin límites por un precio fijo al mes.</p>
           <div className="flex gap-4 justify-center flex-wrap items-center">
             <div className="text-center">
               <div className="text-3xl font-bold text-yellow-500">$12</div>

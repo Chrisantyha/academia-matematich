@@ -123,13 +123,13 @@ export default function GestionarCursoPage() {
       const data = await response.json()
 
       if (!data.ok) {
-        alert(data.error || 'Error al eliminar la leccion')
+        alert(data.error || 'Error al eliminar la lección')
         return
       }
 
       cargarDatos()
     } catch (err) {
-      alert('Error de conexion al eliminar la leccion')
+      alert('Error de conexión al eliminar la lección')
     } finally {
       setBorrandoId(null)
     }
@@ -156,7 +156,7 @@ export default function GestionarCursoPage() {
         alert(
           data.detalle
             ? `${data.error}\n\n${JSON.stringify(data.detalle, null, 2)}`
-            : (data.error || 'Error al eliminar el modulo')
+            : (data.error || 'Error al eliminar el módulo')
         )
         return
       }
@@ -164,7 +164,7 @@ export default function GestionarCursoPage() {
       if (moduloActivo === modulo.id) setModuloActivo(null)
       cargarDatos()
     } catch (err) {
-      alert('Error de conexion al eliminar el modulo')
+      alert('Error de conexión al eliminar el módulo')
     } finally {
       setBorrandoId(null)
     }
@@ -185,13 +185,13 @@ export default function GestionarCursoPage() {
       const data = await response.json()
 
       if (!data.ok) {
-        alert(data.error || 'Error al renombrar el modulo')
+        alert(data.error || 'Error al renombrar el módulo')
         return
       }
 
       cargarDatos()
     } catch (err) {
-      alert('Error de conexion al renombrar el modulo')
+      alert('Error de conexión al renombrar el módulo')
     }
   }
 
@@ -208,13 +208,13 @@ export default function GestionarCursoPage() {
       const data = await response.json()
 
       if (!data.ok) {
-        alert(data.error || 'Error al renombrar la leccion')
+        alert(data.error || 'Error al renombrar la lección')
         return
       }
 
       cargarDatos()
     } catch (err) {
-      alert('Error de conexion al renombrar la leccion')
+      alert('Error de conexión al renombrar la lección')
     }
   }
 
@@ -257,7 +257,7 @@ export default function GestionarCursoPage() {
       setCurso(data.curso)
       setEditandoCurso(false)
     } catch (err) {
-      alert('Error de conexion al actualizar el curso')
+      alert('Error de conexión al actualizar el curso')
     } finally {
       setGuardandoCurso(false)
     }
@@ -270,7 +270,7 @@ export default function GestionarCursoPage() {
       .eq('id', cursoId)
 
     setCurso({ ...curso, estado: 'en_revision' })
-    alert('Curso enviado a revision. El admin lo aprobara pronto.')
+    alert('Curso enviado a revisión. El admin lo aprobará pronto.')
   }
 
   if (loading) {
@@ -341,7 +341,7 @@ export default function GestionarCursoPage() {
             <h3 className="text-sm font-bold mb-4">Editar curso</h3>
 
             <div className="mb-4">
-              <label className="block text-sm font-semibold text-slate-300 mb-2">Titulo</label>
+              <label className="block text-sm font-semibold text-slate-300 mb-2">Título</label>
               <input
                 type="text"
                 name="titulo"
@@ -352,7 +352,7 @@ export default function GestionarCursoPage() {
             </div>
 
             <div className="mb-4">
-              <label className="block text-sm font-semibold text-slate-300 mb-2">Descripcion</label>
+              <label className="block text-sm font-semibold text-slate-300 mb-2">Descripción</label>
               <textarea
                 name="descripcion"
                 value={formCurso.descripcion}
@@ -364,7 +364,7 @@ export default function GestionarCursoPage() {
 
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-2">Categoria</label>
+                <label className="block text-sm font-semibold text-slate-300 mb-2">Categoría</label>
                 <select
                   name="categoria"
                   value={formCurso.categoria}
@@ -426,12 +426,12 @@ export default function GestionarCursoPage() {
 
         {/* MODULOS */}
         <div className="mb-6">
-          <h2 className="text-lg font-bold mb-4">Modulos del curso</h2>
+          <h2 className="text-lg font-bold mb-4">Módulos del curso</h2>
 
           {modulos.length === 0 ? (
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center mb-4">
               <div className="text-4xl mb-3">📚</div>
-              <p className="text-slate-400 text-sm">No hay modulos aun. Agrega el primero.</p>
+              <p className="text-slate-400 text-sm">No hay módulos aún. Agrega el primero.</p>
             </div>
           ) : (
             <div className="space-y-4 mb-6">
@@ -476,7 +476,7 @@ export default function GestionarCursoPage() {
                       </Link>
                       <button
                         onClick={(e) => renombrarModulo(modulo, e)}
-                        title="Renombrar modulo"
+                        title="Renombrar módulo"
                         className="text-slate-500 hover:text-yellow-400 transition-colors"
                       >
                         ✏️
@@ -484,7 +484,7 @@ export default function GestionarCursoPage() {
                       <button
                         onClick={(e) => borrarModulo(modulo, e)}
                         disabled={borrandoId === modulo.id}
-                        title="Eliminar modulo"
+                        title="Eliminar módulo"
                         className="text-slate-500 hover:text-red-400 transition-colors disabled:opacity-40"
                       >
                         🗑️
@@ -521,7 +521,7 @@ export default function GestionarCursoPage() {
                               )}
                               <button
                                 onClick={() => renombrarLeccion(leccion)}
-                                title="Renombrar leccion"
+                                title="Renombrar lección"
                                 className="text-slate-500 hover:text-yellow-400 transition-colors text-sm"
                               >
                                 ✏️
@@ -529,7 +529,7 @@ export default function GestionarCursoPage() {
                               <button
                                 onClick={() => borrarLeccion(leccion)}
                                 disabled={borrandoId === leccion.id}
-                                title="Eliminar leccion"
+                                title="Eliminar lección"
                                 className="text-slate-500 hover:text-red-400 transition-colors disabled:opacity-40 text-sm"
                               >
                                 🗑️
@@ -554,13 +554,13 @@ export default function GestionarCursoPage() {
 
           {/* AGREGAR MODULO */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-            <h3 className="text-sm font-bold mb-4">Agregar modulo</h3>
+            <h3 className="text-sm font-bold mb-4">Agregar módulo</h3>
             <div className="flex gap-3">
               <input
                 type="text"
                 value={nuevoModulo}
                 onChange={(e) => setNuevoModulo(e.target.value)}
-                placeholder="Ej: Modulo 1 — Limites"
+                placeholder="Ej: Módulo 1 — Límites"
                 className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-yellow-500 transition-colors"
                 onKeyDown={(e) => e.key === 'Enter' && agregarModulo()}
               />

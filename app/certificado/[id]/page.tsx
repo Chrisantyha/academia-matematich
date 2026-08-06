@@ -23,7 +23,7 @@ export default async function CertificadoPage({ params }: { params: Promise<{ id
         <div className="text-center">
           <div className="text-5xl mb-4">🎓</div>
           <h1 className="text-2xl font-bold mb-2">Certificado no encontrado</h1>
-          <p className="text-slate-400">Este certificado no existe o no es valido.</p>
+          <p className="text-slate-400">Este certificado no existe o no es válido.</p>
         </div>
       </main>
     )
@@ -95,7 +95,7 @@ export default async function CertificadoPage({ params }: { params: Promise<{ id
 
                 <div className="text-right">
                   <div className="text-xs text-slate-500 uppercase tracking-widest mb-1">
-                    Codigo de verificación
+                    Código de verificación
                   </div>
                   <div className="font-mono text-yellow-500 font-bold text-lg">
                     {certificado.codigo_verificacion}

@@ -41,7 +41,7 @@ export default function CrearCursoPage() {
 
   async function handleSubmit() {
     if (!form.titulo || !form.descripcion) {
-      setError('El titulo y descripcion son obligatorios')
+      setError('El título y descripción son obligatorios')
       return
     }
 
@@ -101,7 +101,7 @@ export default function CrearCursoPage() {
             Panel Docente
           </div>
           <h1 className="text-3xl font-bold tracking-tight">Crear nuevo curso</h1>
-          <p className="text-slate-400 mt-2">Completa la informacion basica de tu curso.</p>
+          <p className="text-slate-400 mt-2">Completa la información básica de tu curso.</p>
         </div>
 
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8">
@@ -109,14 +109,14 @@ export default function CrearCursoPage() {
           {/* TITULO */}
           <div className="mb-6">
             <label className="block text-sm font-semibold text-slate-300 mb-2">
-              Titulo del curso *
+              Título del curso *
             </label>
             <input
               type="text"
               name="titulo"
               value={form.titulo}
               onChange={handleChange}
-              placeholder="Ej: Calculo Diferencial desde cero"
+              placeholder="Ej: Cálculo Diferencial desde cero"
               className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-yellow-500 transition-colors"
             />
           </div>
@@ -124,13 +124,13 @@ export default function CrearCursoPage() {
           {/* DESCRIPCION */}
           <div className="mb-6">
             <label className="block text-sm font-semibold text-slate-300 mb-2">
-              Descripcion *
+              Descripción *
             </label>
             <textarea
               name="descripcion"
               value={form.descripcion}
               onChange={handleChange}
-              placeholder="Describe de que trata el curso, que aprendera el alumno..."
+              placeholder="Describe de qué trata el curso, qué aprenderá el alumno..."
               rows={4}
               className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-yellow-500 transition-colors resize-none"
             />
@@ -140,7 +140,7 @@ export default function CrearCursoPage() {
           <div className="grid grid-cols-2 gap-4 mb-6">
             <div>
               <label className="block text-sm font-semibold text-slate-300 mb-2">
-                Categoria
+                Categoría
               </label>
               <select
                 name="categoria"
@@ -186,7 +186,7 @@ export default function CrearCursoPage() {
                 className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-8 pr-4 py-3 text-white outline-none focus:border-yellow-500 transition-colors"
               />
             </div>
-            <p className="text-slate-500 text-xs mt-1">Precio minimo recomendado: $9</p>
+            <p className="text-slate-500 text-xs mt-1">Precio mínimo recomendado: $9</p>
           </div>
 
           {error && (

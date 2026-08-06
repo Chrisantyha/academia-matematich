@@ -425,7 +425,7 @@ export default function CrearEvaluacionPage() {
 
   async function guardarEvaluacion() {
     if (!titulo) {
-      setError('El titulo es obligatorio')
+      setError('El título es obligatorio')
       return
     }
     if (preguntas.length === 0) {
@@ -471,7 +471,7 @@ export default function CrearEvaluacionPage() {
         .eq('id', evalId)
 
       if (updateError) {
-        setError('Error al actualizar evaluacion')
+        setError('Error al actualizar evaluación')
         setGuardando(false)
         return
       }
@@ -501,7 +501,7 @@ export default function CrearEvaluacionPage() {
         .single()
 
       if (evalError) {
-        setError('Error al guardar evaluacion')
+        setError('Error al guardar evaluación')
         setGuardando(false)
         return
       }
@@ -530,7 +530,7 @@ export default function CrearEvaluacionPage() {
       }
     }
 
-    alert(evaluacionId ? 'Evaluacion actualizada correctamente' : 'Evaluacion guardada correctamente')
+    alert(evaluacionId ? 'Evaluación actualizada correctamente' : 'Evaluación guardada correctamente')
     router.push(`/docente/curso/${moduloData?.curso_id}`)
   }
 
@@ -553,10 +553,10 @@ export default function CrearEvaluacionPage() {
 
         <div className="mb-8">
           <div className="text-yellow-500 text-xs font-bold uppercase tracking-widest mb-2">
-            {evaluacionId ? 'Editar evaluación' : 'Crear evaluacion'}
+            {evaluacionId ? 'Editar evaluación' : 'Crear evaluación'}
           </div>
           <h1 className="text-3xl font-bold">
-            {evaluacionId ? 'Editar evaluación del módulo' : 'Nueva evaluacion del modulo'}
+            {evaluacionId ? 'Editar evaluación del módulo' : 'Nueva evaluación del módulo'}
           </h1>
           <p className="text-slate-400 mt-2 text-sm">
             Puedes usar LaTeX en las preguntas. Ejemplo: $x^2$ o $$\frac{"{x}"}{"{2}"}$$
@@ -570,17 +570,17 @@ export default function CrearEvaluacionPage() {
 
         {/* CONFIG GENERAL */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 mb-6">
-          <h2 className="text-base font-bold mb-4">Configuracion general</h2>
+          <h2 className="text-base font-bold mb-4">Configuración general</h2>
 
           <div className="mb-4">
             <label className="block text-sm font-semibold text-slate-300 mb-2">
-              Titulo de la evaluacion
+              Título de la evaluación
             </label>
             <input
               type="text"
               value={titulo}
               onChange={(e) => setTitulo(e.target.value)}
-              placeholder="Ej: Evaluacion Modulo 1 — Limites"
+              placeholder="Ej: Evaluación Módulo 1 — Límites"
               className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-yellow-500 transition-colors"
             />
           </div>
@@ -588,7 +588,7 @@ export default function CrearEvaluacionPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-slate-300 mb-2">
-                Nota minima para aprobar (%)
+                Nota mínima para aprobar (%)
               </label>
               <input
                 type="number"
@@ -690,9 +690,9 @@ export default function CrearEvaluacionPage() {
                     onChange={(e) => actualizarPregunta(index, 'tipo', e.target.value)}
                     className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 transition-colors"
                   >
-                    <option value="opcion_multiple">Opcion multiple</option>
+                    <option value="opcion_multiple">Opción múltiple</option>
                     <option value="verdadero_falso">Verdadero / Falso</option>
-                    <option value="numerica">Respuesta numerica</option>
+                    <option value="numerica">Respuesta numérica</option>
                   </select>
                 </div>
               )}
@@ -734,7 +734,7 @@ export default function CrearEvaluacionPage() {
                         type="text"
                         value={op}
                         onChange={(e) => actualizarOpcion(index, opIndex, e.target.value)}
-                        placeholder={`Opcion ${String.fromCharCode(65 + opIndex)}`}
+                        placeholder={`Opción ${String.fromCharCode(65 + opIndex)}`}
                         className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-white placeholder-slate-500 outline-none focus:border-yellow-500 transition-colors text-sm"
                       />
                     </div>
@@ -900,7 +900,7 @@ export default function CrearEvaluacionPage() {
             disabled={guardando}
             className="bg-yellow-500 text-black font-bold px-8 py-3 rounded-xl hover:bg-yellow-400 transition-colors disabled:opacity-50"
           >
-            {guardando ? 'Guardando...' : evaluacionId ? 'Guardar cambios' : 'Guardar evaluacion'}
+            {guardando ? 'Guardando...' : evaluacionId ? 'Guardar cambios' : 'Guardar evaluación'}
           </button>
           <button
             onClick={() => router.back()}

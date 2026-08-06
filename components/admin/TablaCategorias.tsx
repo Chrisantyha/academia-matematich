@@ -28,21 +28,21 @@ export default function TablaCategorias({ categorias }: { categorias: Categoria[
       const data = await response.json()
 
       if (!data.ok) {
-        alert(data.error || 'Error al crear la categoria')
+        alert(data.error || 'Error al crear la categoría')
         return
       }
 
       setNuevaCategoria('')
       router.refresh()
     } catch {
-      alert('Error de conexión al crear la categoria')
+      alert('Error de conexión al crear la categoría')
     } finally {
       setCreando(false)
     }
   }
 
   async function borrarCategoria(categoria: Categoria) {
-    const confirmado = window.confirm(`¿Eliminar la categoria "${categoria.nombre}"?`)
+    const confirmado = window.confirm(`¿Eliminar la categoría "${categoria.nombre}"?`)
     if (!confirmado) return
 
     setBorrandoId(categoria.id)
@@ -51,13 +51,13 @@ export default function TablaCategorias({ categorias }: { categorias: Categoria[
       const data = await response.json()
 
       if (!data.ok) {
-        alert(data.error || 'Error al eliminar la categoria')
+        alert(data.error || 'Error al eliminar la categoría')
         return
       }
 
       router.refresh()
     } catch {
-      alert('Error de conexión al eliminar la categoria')
+      alert('Error de conexión al eliminar la categoría')
     } finally {
       setBorrandoId(null)
     }
@@ -67,11 +67,11 @@ export default function TablaCategorias({ categorias }: { categorias: Categoria[
     <div>
       <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden mb-6">
         <div className="px-6 py-4 border-b border-slate-800">
-          <h3 className="text-base font-bold">Categorias ({categorias.length})</h3>
+          <h3 className="text-base font-bold">Categorías ({categorias.length})</h3>
         </div>
 
         {categorias.length === 0 ? (
-          <div className="p-8 text-center text-slate-400 text-sm">No hay categorias creadas.</div>
+          <div className="p-8 text-center text-slate-400 text-sm">No hay categorías creadas.</div>
         ) : (
           <table className="w-full text-sm">
             <thead>
@@ -105,13 +105,13 @@ export default function TablaCategorias({ categorias }: { categorias: Categoria[
       </div>
 
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-        <h3 className="text-sm font-bold mb-4">Agregar categoria</h3>
+        <h3 className="text-sm font-bold mb-4">Agregar categoría</h3>
         <div className="flex gap-3">
           <input
             type="text"
             value={nuevaCategoria}
             onChange={(e) => setNuevaCategoria(e.target.value)}
-            placeholder="Ej: Trigonometria"
+            placeholder="Ej: Trigonometría"
             className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-yellow-500 transition-colors"
             onKeyDown={(e) => e.key === 'Enter' && crearCategoria()}
           />

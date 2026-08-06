@@ -116,7 +116,7 @@ export default function LeccionPlayer({ lecciones, modulos, cursoId, progresoIni
         ) : (
           <div className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center">
             <div className="text-5xl mb-4">📄</div>
-            <h3 className="font-bold mb-1">Esta leccion es solo material</h3>
+            <h3 className="font-bold mb-1">Esta lección es solo material</h3>
             <p className="text-slate-400 text-sm mb-6">
               No tiene video, descarga el PDF para ver los ejercicios.
             </p>
@@ -136,7 +136,7 @@ export default function LeccionPlayer({ lecciones, modulos, cursoId, progresoIni
           <div>
             <h2 className="text-lg font-bold">{leccionActual.titulo}</h2>
             <p className="text-slate-400 text-sm mt-1">
-              Leccion {leccionActual.orden} · {leccionActual.duracion_minutos} min
+              Lección {leccionActual.orden} · {leccionActual.duracion_minutos} min
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -192,7 +192,7 @@ export default function LeccionPlayer({ lecciones, modulos, cursoId, progresoIni
               ¡Completaste el curso!
             </h3>
             <p className="text-slate-400 text-sm mb-4">
-              Genera tu certificado de completacion.
+              Genera tu certificado de finalización.
             </p>
             <button
               onClick={obtenerCertificado}
@@ -223,7 +223,7 @@ export default function LeccionPlayer({ lecciones, modulos, cursoId, progresoIni
                     <div className="px-4 py-3 bg-slate-800/50">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-bold text-slate-500">
-                          MODULO {mIndex + 1}
+                          MÓDULO {mIndex + 1}
                         </span>
                         {estaCompleto && (
                           <span className="text-green-400 text-xs">✓</span>
@@ -278,7 +278,7 @@ export default function LeccionPlayer({ lecciones, modulos, cursoId, progresoIni
                             onClick={() => router.push(`/evaluacion/${modulo.evaluacion!.id}`)}
                             className="w-full bg-yellow-500 text-black font-bold py-2 rounded-xl hover:bg-yellow-400 transition-colors text-xs"
                           >
-                            📝 Tomar evaluacion — {modulo.evaluacion!.titulo}
+                            📝 Tomar evaluación — {modulo.evaluacion!.titulo}
                           </button>
                         ) : (
                           <div className="w-full border border-slate-700 text-slate-500 font-semibold py-2 rounded-xl text-xs text-center">

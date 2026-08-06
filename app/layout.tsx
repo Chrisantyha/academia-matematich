@@ -6,7 +6,7 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'ExactaLab — Ciencias Exactas para LATAM',
-  description: 'Aprende Matematicas, Fisica y Calculo desde la raiz.',
+  description: 'Aprende Matemáticas, Física y Cálculo desde la raíz.',
 }
 
 export default function RootLayout({

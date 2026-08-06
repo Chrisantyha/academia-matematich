@@ -50,7 +50,7 @@ export default function BotonComprar({ cursoId, precio, titulo }: BotonComprarPr
       setLoading(false)
 
     } catch (error) {
-      setError('Error de conexion. Intenta de nuevo.')
+      setError('Error de conexión. Intenta de nuevo.')
       setLoading(false)
     }
   }
@@ -81,7 +81,7 @@ export default function BotonComprar({ cursoId, precio, titulo }: BotonComprarPr
         window.location.reload()
       } else {
         verificandoRef.current = false
-        setError(data.error || 'El pago aun no ha sido confirmado')
+        setError(data.error || 'El pago aún no ha sido confirmado')
         setVerificando(false)
       }
 

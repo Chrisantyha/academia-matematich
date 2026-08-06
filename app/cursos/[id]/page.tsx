@@ -92,8 +92,8 @@ export default async function CursoPage({ params }: { params: Promise<{ id: stri
           ) : (
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center">
               <div className="text-5xl mb-4">🎬</div>
-              <h2 className="text-xl font-bold mb-2">Proximamente</h2>
-              <p className="text-slate-400 text-sm">Las lecciones se agregaran pronto.</p>
+              <h2 className="text-xl font-bold mb-2">Próximamente</h2>
+              <p className="text-slate-400 text-sm">Las lecciones se agregarán pronto.</p>
             </div>
           )
         ) : (
