@@ -40,7 +40,14 @@ export default function RegistroPage() {
       return
     }
 
+    fetch('/api/email/bienvenida', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, nombre }),
+    }).catch((err) => console.error('Error enviando email de bienvenida:', err))
+
     router.push('/login')
+
   }
 
   return (
