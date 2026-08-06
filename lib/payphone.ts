@@ -2,17 +2,17 @@ import https from 'https'
 
 const PAYPHONE_TOKEN = process.env.PAYPHONE_TOKEN
 
-export function consultarPayphone(transactionId: number, clientTransactionId: string): Promise<any> {
+export function consultarPayphone(clientTransactionId: string): Promise<any> {
   return new Promise((resolve, reject) => {
-    const data = JSON.stringify({ id: transactionId, clientTxId: clientTransactionId })
-
+    // Integramos con "Links de Pago" (API Link), no con el Boton de Pago, asi
+    // que la consulta de estado es API Sale: GET /api/Sale/client/{id}, sin
+    // body -- no el POST /api/button/V2/Confirm que exige un "id" numerico.
     const options = {
       hostname: 'pay.payphonetodoesposible.com',
-      path: '/api/button/V2/Confirm',
-      method: 'POST',
+      path: `/api/Sale/client/${encodeURIComponent(clientTransactionId)}`,
+      method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(data),
         'Authorization': `Bearer ${PAYPHONE_TOKEN}`,
       },
     }
@@ -30,7 +30,6 @@ export function consultarPayphone(transactionId: number, clientTransactionId: st
     })
 
     req.on('error', reject)
-    req.write(data)
     req.end()
   })
 }

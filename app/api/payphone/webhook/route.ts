@@ -18,21 +18,14 @@ export async function POST(request: Request) {
   try {
     // El body de este POST puede ser falsificado por cualquiera (no hay firma
     // ni secreto de webhook), asi que de aca solo se usan ClientTransactionId
-    // y TransactionId como claves para consultar a PayPhone (POST /Confirm
-    // exige ambos: { id, clientTxId }), mas StoreId (chequeo minimo
-    // existente). El resto de campos -- TransactionStatus, Amount,
-    // AuthorizationCode -- se ignoran y se vuelven a pedir server-to-server
-    // con consultarPayphone antes de aprobar nada.
-    const { ClientTransactionId, StoreId, TransactionId } = body ?? {}
+    // (para saber que compra buscar y consultar a PayPhone) y StoreId
+    // (chequeo minimo existente). El resto de campos -- TransactionStatus,
+    // Amount, AuthorizationCode, TransactionId -- se ignoran y se vuelven a
+    // pedir server-to-server con consultarPayphone antes de aprobar nada.
+    const { ClientTransactionId, StoreId } = body ?? {}
 
-    if (!ClientTransactionId || !StoreId || TransactionId === undefined || TransactionId === null || TransactionId === '') {
+    if (!ClientTransactionId || !StoreId) {
       console.error('PayPhone webhook: faltan campos requeridos', body)
-      return NextResponse.json({ Response: false, ErrorCode: '444' })
-    }
-
-    const transactionIdBody = Number(TransactionId)
-    if (!Number.isFinite(transactionIdBody)) {
-      console.error('PayPhone webhook: TransactionId no es numérico', TransactionId)
       return NextResponse.json({ Response: false, ErrorCode: '444' })
     }
 
@@ -64,7 +57,7 @@ export async function POST(request: Request) {
     // backend usando PAYPHONE_TOKEN.
     let resultado: any
     try {
-      resultado = await consultarPayphone(transactionIdBody, ClientTransactionId)
+      resultado = await consultarPayphone(ClientTransactionId)
     } catch (err) {
       console.error('PayPhone webhook: error consultando a PayPhone', err)
       return NextResponse.json({ Response: false, ErrorCode: '222' })
