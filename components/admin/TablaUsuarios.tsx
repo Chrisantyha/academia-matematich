@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 type Usuario = {
   id: string
@@ -149,7 +150,11 @@ export default function TablaUsuarios({
           <tbody>
             {usuariosFiltrados.map((u) => (
               <tr key={u.id} className="border-b border-slate-800 hover:bg-slate-800/50 transition-colors">
-                <td className="px-6 py-4 font-semibold">{u.nombre || '—'}</td>
+                <td className="px-6 py-4 font-semibold">
+                  <Link href={`/admin/usuarios/${u.id}`} className="hover:text-yellow-500 transition-colors">
+                    {u.nombre || '—'}
+                  </Link>
+                </td>
                 <td className="px-6 py-4 text-slate-400">{u.email}</td>
                 <td className="px-6 py-4">
                   {u.id === adminActualId ? (
