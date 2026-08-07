@@ -43,6 +43,35 @@ export default async function CursoPage({ params }: { params: Promise<{ id: stri
     .eq('curso_id', id)
     .order('orden', { ascending: true })
 
+  // Examen final del curso: es la evaluacion de este curso que NO tiene
+  // modulo_id (a diferencia de las evaluaciones de modulo).
+  let examenFinal: { id: string; titulo: string; aprobado: boolean } | null = null
+
+  const { data: examenData } = await supabase
+    .from('evaluaciones')
+    .select('id, titulo')
+    .eq('curso_id', id)
+    .is('modulo_id', null)
+    .maybeSingle()
+
+  if (examenData) {
+    let aprobado = false
+
+    if (user) {
+      const { data: resultadoAprobado } = await supabase
+        .from('resultados_evaluacion')
+        .select('id')
+        .eq('evaluacion_id', examenData.id)
+        .eq('alumno_id', user.id)
+        .eq('aprobado', true)
+        .maybeSingle()
+
+      aprobado = !!resultadoAprobado
+    }
+
+    examenFinal = { id: examenData.id, titulo: examenData.titulo, aprobado }
+  }
+
   if (!curso) {
     return (
       <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
@@ -88,6 +117,7 @@ export default async function CursoPage({ params }: { params: Promise<{ id: stri
               modulos={modulosConEval}
               cursoId={id}
               progresoInicial={progresoInicial}
+              examenFinal={examenFinal}
             />
           ) : (
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center">

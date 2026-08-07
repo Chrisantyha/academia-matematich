@@ -23,14 +23,21 @@ interface Modulo {
   evaluacion?: { id: string; titulo: string } | null
 }
 
+interface ExamenFinal {
+  id: string
+  titulo: string
+  aprobado: boolean
+}
+
 interface LeccionPlayerProps {
   lecciones: Leccion[]
   modulos: Modulo[]
   cursoId: string
   progresoInicial: string[]
+  examenFinal?: ExamenFinal | null
 }
 
-export default function LeccionPlayer({ lecciones, modulos, cursoId, progresoInicial }: LeccionPlayerProps) {
+export default function LeccionPlayer({ lecciones, modulos, cursoId, progresoInicial, examenFinal }: LeccionPlayerProps) {
   const router = useRouter()
   const [leccionActual, setLeccionActual] = useState(lecciones[0])
   const [completadas, setCompletadas] = useState<string[]>(progresoInicial)
@@ -39,6 +46,16 @@ export default function LeccionPlayer({ lecciones, modulos, cursoId, progresoIni
   const [descargando, setDescargando] = useState(false)
 
   const porcentaje = Math.round((completadas.length / lecciones.length) * 100)
+  const leccionesCompletas = porcentaje === 100
+
+  // El certificado ahora exige, ademas de completar todas las lecciones,
+  // que exista un examen final y que ya haya sido aprobado. Si el curso no
+  // tiene examen final configurado (examenFinal es null/undefined), se
+  // permite el certificado solo con las lecciones, para no romper cursos
+  // antiguos que no tengan uno.
+  const requiereExamen = !!examenFinal
+  const examenAprobado = examenFinal?.aprobado ?? false
+  const puedeObtenerCertificado = leccionesCompletas && (!requiereExamen || examenAprobado)
 
   async function marcarCompletada() {
     if (completadas.includes(leccionActual.id)) return
@@ -184,8 +201,29 @@ export default function LeccionPlayer({ lecciones, modulos, cursoId, progresoIni
           </div>
         </div>
 
-        {/* BOTON CERTIFICADO */}
-        {porcentaje === 100 && (
+        {/* EXAMEN FINAL — aparece cuando las lecciones estan completas pero
+            aun no se ha aprobado el examen final del curso */}
+        {leccionesCompletas && requiereExamen && !examenAprobado && (
+          <div className="mt-4 bg-sky-500/10 border border-sky-500/30 rounded-xl p-6 text-center">
+            <div className="text-4xl mb-3">📝</div>
+            <h3 className="text-sky-400 font-bold mb-1">
+              ¡Completaste todas las lecciones!
+            </h3>
+            <p className="text-slate-400 text-sm mb-4">
+              Rinde el examen final para obtener tu certificado.
+            </p>
+            <button
+              onClick={() => router.push(`/evaluacion/${examenFinal!.id}`)}
+              className="bg-sky-500 text-black font-bold px-8 py-3 rounded-xl hover:bg-sky-400 transition-colors"
+            >
+              📝 Rendir examen final
+            </button>
+          </div>
+        )}
+
+        {/* BOTON CERTIFICADO — solo si lecciones completas Y (no hay examen
+            final o ya fue aprobado) */}
+        {puedeObtenerCertificado && (
           <div className="mt-4 bg-green-500/10 border border-green-500/30 rounded-xl p-6 text-center">
             <div className="text-4xl mb-3">🎓</div>
             <h3 className="text-green-400 font-bold mb-1">
