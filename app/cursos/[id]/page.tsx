@@ -28,7 +28,8 @@ export default async function CursoPage({ params }: { params: Promise<{ id: stri
       .eq('alumno_id', user.id)
       .eq('curso_id', id)
       .eq('estado', 'aprobado')
-      .single()
+      .limit(1)
+      .maybeSingle()
 
     tieneElCurso = !!compra
   }
