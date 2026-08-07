@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { enviarEmail } from '@/lib/email/enviar'
+import { plantillaCompra } from '@/lib/email/plantillas/compra'
 import https from 'https'
 
 const PAYPHONE_TOKEN = process.env.PAYPHONE_TOKEN
@@ -55,18 +57,22 @@ export async function POST(request: Request) {
     console.log('Confirmando pago:', { id, clientTransactionId })
 
     // Verificar que la compra pertenezca al usuario autenticado, y traer
-    // el monto que se fijo honestamente al momento de generar el link.
-    // Este es el valor de referencia contra el que vamos a comparar lo
-    // que PayPhone diga que realmente se pago.
+    // el monto y estado actual. El estado actual nos sirve para saber si
+    // esta es la primera vez que se aprueba (y por lo tanto hay que
+    // mandar el correo de confirmacion) o si ya estaba aprobada antes
+    // (por ejemplo porque el webhook de PayPhone ya la proceso), en cuyo
+    // caso no reenviamos el correo para no duplicarlo.
     const { data: compraExistente } = await supabase
       .from('compras')
-      .select('alumno_id, monto, curso_id')
+      .select('alumno_id, monto, curso_id, estado')
       .eq('payphone_transaction_id', clientTransactionId)
       .single()
 
     if (!compraExistente || compraExistente.alumno_id !== user.id) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
     }
+
+    const yaEstabaAprobada = compraExistente.estado === 'aprobado'
 
     // Preguntar a PayPhone si el pago fue aprobado
     const resultado = await confirmarPayphone(id, clientTransactionId)
@@ -124,6 +130,28 @@ export async function POST(request: Request) {
     if (error) {
       console.error('Error al actualizar compra:', error)
       return NextResponse.json({ error: 'Error al registrar compra' }, { status: 500 })
+    }
+
+    // Enviar correo de confirmacion de compra, solo si esta es la primera
+    // vez que se aprueba (evita duplicar el correo si el webhook de
+    // PayPhone ya la habia procesado antes que esta confirmacion manual).
+    if (!yaEstabaAprobada) {
+      try {
+        const { data: curso } = await supabase
+          .from('cursos')
+          .select('titulo')
+          .eq('id', compra?.curso_id)
+          .single()
+
+        if (curso && user.email) {
+          const { subject, html } = plantillaCompra(curso.titulo || 'tu curso', Number(compraExistente.monto))
+          enviarEmail({ to: user.email, subject, html }).catch((err) =>
+            console.error('Error enviando email de compra (confirmacion manual):', err)
+          )
+        }
+      } catch (emailErr) {
+        console.error('Error preparando email de compra (confirmacion manual):', emailErr)
+      }
     }
 
     return NextResponse.json({
