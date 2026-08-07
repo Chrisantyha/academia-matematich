@@ -1,11 +1,11 @@
 import Link from 'next/link'
-import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createAdminSupabaseClient } from '@/lib/supabase-admin'
 import BotonImprimir from '@/components/ui/BotonImprimir'
 import QRCertificado from '@/components/ui/QRCertificado'
 
 export default async function CertificadoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const supabase = await createServerSupabaseClient()
+  const supabase = createAdminSupabaseClient()
 
   const { data: certificado } = await supabase
     .from('certificados')
