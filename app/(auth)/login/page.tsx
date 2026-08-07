@@ -23,17 +23,33 @@ function LoginForm() {
 
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
-    if (error || !data.user) {
-      setError('Correo o contraseña incorrectos')
-      setLoading(false)
-      return
-    }
+if (error || !data.user) {
+  setError('Correo o contraseña incorrectos')
+  setLoading(false)
+  return
+}
 
-    const { data: perfil } = await supabase
-      .from('perfiles')
-      .select('rol')
-      .eq('id', data.user.id)
-      .single()
+// Si este es el primer inicio de sesion del usuario (recien confirmo su
+// correo), disparamos el email de bienvenida. Comparamos created_at contra
+// last_sign_in_at con un margen de tolerancia, porque nunca son exactamente
+// iguales al milisegundo.
+const creado = new Date(data.user.created_at).getTime()
+const ultimoLogin = data.user.last_sign_in_at
+  ? new Date(data.user.last_sign_in_at).getTime()
+  : 0
+const esPrimerLogin = Math.abs(ultimoLogin - creado) < 60_000 // margen de 60s
+
+if (esPrimerLogin) {
+  fetch('/api/email/bienvenida', {
+    method: 'POST',
+  }).catch((err) => console.error('Error enviando email de bienvenida:', err))
+}
+
+const { data: perfil } = await supabase
+  .from('perfiles')
+  .select('rol')
+  .eq('id', data.user.id)
+  .single()
 
     const rol = perfil?.rol || 'alumno'
 

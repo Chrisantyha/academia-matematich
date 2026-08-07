@@ -40,10 +40,6 @@ export default function RegistroPage() {
       return
     }
 
-    fetch('/api/email/bienvenida', {
-     method: 'POST',
-    }).catch((err) => console.error('Error enviando email de bienvenida:', err))
-
     router.push('/login')
 
   }
