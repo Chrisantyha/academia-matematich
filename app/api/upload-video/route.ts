@@ -33,6 +33,41 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Faltan datos' }, { status: 400 })
       }
 
+      // Verificar que el curso exista y, si el usuario no es admin,
+      // que le pertenezca. Esto evita que un docente inserte lecciones
+      // en cursos de otros docentes.
+      const { data: curso, error: cursoError } = await supabase
+        .from('cursos')
+        .select('id, docente_id')
+        .eq('id', cursoId)
+        .single()
+
+      if (cursoError || !curso) {
+        return NextResponse.json({ error: 'Curso no encontrado' }, { status: 404 })
+      }
+
+      if (rol !== 'admin' && curso.docente_id !== user.id) {
+        console.warn('Intento de bypass de propiedad en upload-video:', {
+          userId: user.id,
+          cursoId,
+          docenteRealDelCurso: curso.docente_id,
+        })
+        return NextResponse.json({ error: 'No tienes permiso sobre este curso' }, { status: 403 })
+      }
+
+      // Si se especifico un modulo, verificar que pertenezca a ESTE curso.
+      if (moduloId) {
+        const { data: modulo, error: moduloError } = await supabase
+          .from('modulos')
+          .select('id, curso_id')
+          .eq('id', moduloId)
+          .single()
+
+        if (moduloError || !modulo || modulo.curso_id !== cursoId) {
+          return NextResponse.json({ error: 'El modulo no pertenece a este curso' }, { status: 400 })
+        }
+      }
+
       const { error: dbError } = await supabase
         .from('lecciones')
         .insert({
@@ -58,10 +93,29 @@ export async function POST(request: Request) {
     // que crear el upload contra /stream?direct_user=true con headers TUS; la
     // uploadURL resultante sale en el header Location (no en el body) y sigue
     // siendo de un solo uso, segura para el navegador (sin el API token).
-    const { titulo, tamano } = body
+    const { titulo, tamano, cursoId } = body
 
     if (!tamano) {
       return NextResponse.json({ error: 'Falta el tamano del archivo' }, { status: 400 })
+    }
+
+    // Tambien validamos la propiedad del curso en este paso, para no
+    // desperdiciar cupo de Cloudflare emitiendo URLs de subida hacia
+    // cursos ajenos que luego serian rechazados en el paso "guardar".
+    if (cursoId) {
+      const { data: curso, error: cursoError } = await supabase
+        .from('cursos')
+        .select('id, docente_id')
+        .eq('id', cursoId)
+        .single()
+
+      if (cursoError || !curso) {
+        return NextResponse.json({ error: 'Curso no encontrado' }, { status: 404 })
+      }
+
+      if (rol !== 'admin' && curso.docente_id !== user.id) {
+        return NextResponse.json({ error: 'No tienes permiso sobre este curso' }, { status: 403 })
+      }
     }
 
     const metadata = [

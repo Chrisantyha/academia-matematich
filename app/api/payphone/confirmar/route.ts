@@ -54,10 +54,13 @@ export async function POST(request: Request) {
 
     console.log('Confirmando pago:', { id, clientTransactionId })
 
-    // Verificar que la compra pertenezca al usuario autenticado
+    // Verificar que la compra pertenezca al usuario autenticado, y traer
+    // el monto que se fijo honestamente al momento de generar el link.
+    // Este es el valor de referencia contra el que vamos a comparar lo
+    // que PayPhone diga que realmente se pago.
     const { data: compraExistente } = await supabase
       .from('compras')
-      .select('alumno_id')
+      .select('alumno_id, monto, curso_id')
       .eq('payphone_transaction_id', clientTransactionId)
       .single()
 
@@ -75,6 +78,35 @@ export async function POST(request: Request) {
         error: 'Pago no aprobado',
         estado: resultado.transactionStatus
       })
+    }
+
+    // Validar el monto: el precio esperado (guardado al generar el link)
+    // debe coincidir con lo que PayPhone confirma que realmente se cobro.
+    // PayPhone reporta el monto en centavos, por eso multiplicamos por 100.
+    const montoEsperadoCentavos = Math.round(Number(compraExistente.monto) * 100)
+    const montoPagadoCentavos = Number(resultado.amount)
+
+    if (!Number.isFinite(montoPagadoCentavos) || montoPagadoCentavos !== montoEsperadoCentavos) {
+      console.error('Alerta: monto pagado no coincide con el esperado', {
+        clientTransactionId,
+        cursoId: compraExistente.curso_id,
+        alumnoId: user.id,
+        montoEsperadoCentavos,
+        montoPagadoCentavos,
+      })
+
+      // Marcamos la compra como rechazada en lugar de aprobarla, para
+      // dejar rastro de que hubo una discrepancia de monto.
+      await supabase
+        .from('compras')
+        .update({ estado: 'rechazado' })
+        .eq('payphone_transaction_id', clientTransactionId)
+        .eq('alumno_id', user.id)
+
+      return NextResponse.json({
+        ok: false,
+        error: 'El monto del pago no coincide con el precio del curso. Contacta soporte.'
+      }, { status: 400 })
     }
 
     // Actualizar la compra a aprobada

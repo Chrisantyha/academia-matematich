@@ -1,12 +1,38 @@
 import { NextResponse } from 'next/server'
+import { timingSafeEqual } from 'crypto'
 import { createAdminSupabaseClient } from '@/lib/supabase-admin'
 import { enviarEmail } from '@/lib/email/enviar'
 import { plantillaRecordatorio } from '@/lib/email/plantillas/recordatorio'
 
+function secretoValido(authHeader: string | null): boolean {
+  const secretoEsperado = `Bearer ${process.env.CRON_SECRET ?? ''}`
+
+  if (!authHeader) return false
+
+  // timingSafeEqual exige que ambos buffers tengan la MISMA longitud,
+  // o lanza una excepcion. Si las longitudes no coinciden, ya sabemos
+  // que es invalido, pero igual comparamos contra un buffer del mismo
+  // tamano relleno para no filtrar por timing la longitud del secreto.
+  const bufferRecibido = Buffer.from(authHeader)
+  const bufferEsperado = Buffer.from(secretoEsperado)
+
+  if (bufferRecibido.length !== bufferEsperado.length) {
+    // Comparacion "señuelo" de igual costo, para no salir antes por
+    // longitudes distintas y filtrar esa informacion por tiempo.
+    timingSafeEqual(bufferEsperado, bufferEsperado)
+    return false
+  }
+
+  return timingSafeEqual(bufferRecibido, bufferEsperado)
+}
+
 export async function GET(request: Request) {
-  // Protección: solo Vercel Cron (o quien tenga el secreto) puede disparar esto
+  // Protección: solo Vercel Cron (o quien tenga el secreto) puede disparar esto.
+  // Se usa comparacion de tiempo constante para evitar timing attacks sobre
+  // el CRON_SECRET.
   const authHeader = request.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+
+  if (!secretoValido(authHeader)) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
 
@@ -32,6 +58,7 @@ export async function GET(request: Request) {
 
     for (const compra of compras ?? []) {
       evaluados++
+
       // Lecciones del curso
       const { data: lecciones } = await supabase
         .from('lecciones')
@@ -55,7 +82,6 @@ export async function GET(request: Request) {
 
       const ultimaActividad = progresoReciente.created_at
       const enVentanaInactividad = ultimaActividad <= hace7dias && ultimaActividad > hace14dias
-
       if (!enVentanaInactividad) continue
 
       const { data: alumno } = await supabase.auth.admin.getUserById(compra.alumno_id)
@@ -70,11 +96,13 @@ export async function GET(request: Request) {
 
       const { subject, html } = plantillaRecordatorio(curso?.titulo || 'tu curso')
       const resultado = await enviarEmail({ to: emailAlumno, subject, html })
+
       if (resultado.success) enviados++
     }
 
     console.log(`Cron recordatorio: evaluados=${evaluados} enviados=${enviados}`)
     return NextResponse.json({ ok: true, evaluados, enviados })
+
   } catch (error) {
     console.error('Cron recordatorio: error inesperado', error)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
