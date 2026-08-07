@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createAdminSupabaseClient } from '@/lib/supabase-admin'
 import { tieneAccesoCurso, esDocenteOAdminDelCurso } from '@/lib/acceso'
 import { generarPlantilla } from '@/lib/plantillas'
 
@@ -121,7 +122,9 @@ export async function POST(request: Request) {
       }
     }
 
-    const { data: banco } = await supabase
+    const supabaseAdmin = createAdminSupabaseClient()
+
+    const { data: banco } = await supabaseAdmin
       .from('preguntas')
       .select('id, tipo, pregunta, opciones, respuesta_correcta, tolerancia, es_plantilla, tipo_plantilla, parametros')
       .eq('evaluacion_id', evaluacionId)
