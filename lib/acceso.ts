@@ -33,6 +33,7 @@ export async function tieneAccesoCurso(
     .eq('alumno_id', userId)
     .eq('curso_id', cursoId)
     .eq('estado', 'aprobado')
+    .limit(1)
     .maybeSingle()
 
   return !!compra
