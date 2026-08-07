@@ -40,6 +40,8 @@ export default function GestionarCursoPage() {
   const [borrandoId, setBorrandoId] = useState<string | null>(null)
   const [editandoCurso, setEditandoCurso] = useState(false)
   const [guardandoCurso, setGuardandoCurso] = useState(false)
+  const [subiendoPortada, setSubiendoPortada] = useState(false)
+  const [errorPortada, setErrorPortada] = useState('')
   const [categoriasDisponibles, setCategoriasDisponibles] = useState<string[]>([])
   const [formCurso, setFormCurso] = useState({
     titulo: '',
@@ -263,6 +265,37 @@ export default function GestionarCursoPage() {
     }
   }
 
+  async function subirPortada(e: React.ChangeEvent<HTMLInputElement>) {
+    const archivo = e.target.files?.[0]
+    if (!archivo) return
+
+    setSubiendoPortada(true)
+    setErrorPortada('')
+
+    try {
+      const formData = new FormData()
+      formData.append('archivo', archivo)
+
+      const response = await fetch(`/api/cursos/${cursoId}/portada`, {
+        method: 'POST',
+        body: formData,
+      })
+      const data = await response.json()
+
+      if (!data.ok) {
+        setErrorPortada(data.error || 'Error al subir la portada')
+        return
+      }
+
+      setCurso((prev: any) => ({ ...prev, imagen_url: data.imagenUrl }))
+    } catch (err) {
+      setErrorPortada('Error de conexión al subir la portada')
+    } finally {
+      setSubiendoPortada(false)
+      e.target.value = ''
+    }
+  }
+
   async function publicarCurso() {
     await supabase
       .from('cursos')
@@ -298,23 +331,33 @@ export default function GestionarCursoPage() {
 
         {/* HEADER CURSO */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 mb-8 flex items-start justify-between flex-wrap gap-4">
-          <div>
-            <div className="text-yellow-500 text-xs font-bold uppercase tracking-widest mb-2">
-              {curso?.categoria}
+          <div className="flex gap-4 items-start">
+            <div className="w-24 h-24 rounded-xl overflow-hidden bg-slate-800 flex items-center justify-center flex-shrink-0 border border-slate-700">
+              {curso?.imagen_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={curso.imagen_url} alt={curso?.titulo} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-3xl">📚</span>
+              )}
             </div>
-            <h1 className="text-2xl font-bold mb-1">{curso?.titulo}</h1>
-            <p className="text-slate-400 text-sm">{curso?.descripcion}</p>
-            <div className="flex gap-3 mt-3">
-              <span className="text-yellow-500 font-bold">${curso?.precio}</span>
-              <span className={`text-xs font-bold px-2 py-1 rounded-full ${
-                curso?.estado === 'publicado'
-                  ? 'bg-green-500/10 text-green-400 border border-green-500/30'
-                  : curso?.estado === 'en_revision'
-                  ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/30'
-                  : 'bg-slate-800 text-slate-400 border border-slate-700'
-              }`}>
-                {curso?.estado === 'publicado' ? 'Publicado' : curso?.estado === 'en_revision' ? 'En revisión' : 'Borrador'}
-              </span>
+            <div>
+              <div className="text-yellow-500 text-xs font-bold uppercase tracking-widest mb-2">
+                {curso?.categoria}
+              </div>
+              <h1 className="text-2xl font-bold mb-1">{curso?.titulo}</h1>
+              <p className="text-slate-400 text-sm">{curso?.descripcion}</p>
+              <div className="flex gap-3 mt-3">
+                <span className="text-yellow-500 font-bold">${curso?.precio}</span>
+                <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                  curso?.estado === 'publicado'
+                    ? 'bg-green-500/10 text-green-400 border border-green-500/30'
+                    : curso?.estado === 'en_revision'
+                    ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/30'
+                    : 'bg-slate-800 text-slate-400 border border-slate-700'
+                }`}>
+                  {curso?.estado === 'publicado' ? 'Publicado' : curso?.estado === 'en_revision' ? 'En revisión' : 'Borrador'}
+                </span>
+              </div>
             </div>
           </div>
           <div className="flex gap-3">
@@ -339,6 +382,36 @@ export default function GestionarCursoPage() {
         {editandoCurso && (
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 mb-8">
             <h3 className="text-sm font-bold mb-4">Editar curso</h3>
+
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-slate-300 mb-2">Portada del curso</label>
+              <div className="flex items-center gap-4">
+                <div className="w-32 h-20 rounded-xl overflow-hidden bg-slate-800 flex items-center justify-center flex-shrink-0 border border-slate-700">
+                  {curso?.imagen_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={curso.imagen_url} alt="Portada actual" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-2xl">📚</span>
+                  )}
+                </div>
+                <div>
+                  <label className="inline-block cursor-pointer bg-slate-800 border border-slate-700 text-white font-semibold px-4 py-2 rounded-xl hover:bg-slate-700 transition-colors text-sm">
+                    {subiendoPortada ? 'Subiendo...' : curso?.imagen_url ? 'Cambiar imagen' : 'Subir imagen'}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={subirPortada}
+                      disabled={subiendoPortada}
+                      className="hidden"
+                    />
+                  </label>
+                  <p className="text-slate-500 text-xs mt-2">JPG, PNG o WEBP · máximo 5MB</p>
+                  {errorPortada && (
+                    <p className="text-red-400 text-xs mt-1">{errorPortada}</p>
+                  )}
+                </div>
+              </div>
+            </div>
 
             <div className="mb-4">
               <label className="block text-sm font-semibold text-slate-300 mb-2">Título</label>

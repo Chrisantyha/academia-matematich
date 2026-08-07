@@ -103,10 +103,20 @@ export default async function CursoPage({ params }: { params: Promise<{ id: stri
             {/* PREVIEW */}
             <div className="lg:col-span-2">
               <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
-                <div className="h-64 bg-slate-800 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="text-6xl mb-4">🔒</div>
-                    <p className="text-slate-400 text-sm">Compra el curso para acceder al contenido</p>
+                <div className="h-64 bg-slate-800 flex items-center justify-center relative overflow-hidden">
+                  {curso.imagen_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={curso.imagen_url}
+                      alt={curso.titulo}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                  )}
+                  <div className={`absolute inset-0 flex items-center justify-center ${curso.imagen_url ? 'bg-slate-950/70' : ''}`}>
+                    <div className="text-center">
+                      <div className="text-6xl mb-4">🔒</div>
+                      <p className="text-slate-300 text-sm font-medium">Compra el curso para acceder al contenido</p>
+                    </div>
                   </div>
                 </div>
               </div>

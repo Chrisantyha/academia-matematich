@@ -84,11 +84,14 @@ export default function CursosPage() {
                 key={c.id}
                 className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden cursor-pointer hover:-translate-y-1 hover:border-yellow-500/40 transition-all group"
               >
-                <div className="h-36 bg-slate-800 flex items-center justify-center text-6xl relative">
-                  📚
-                  <div className="absolute inset-0 bg-yellow-500/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <span className="text-3xl">▶</span>
-                  </div>
+                <div className="h-36 bg-slate-800 flex items-center justify-center text-6xl relative overflow-hidden">
+                  {c.imagen_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={c.imagen_url} alt={c.titulo} className="w-full h-full object-cover" />
+                  ) : (
+                    '📚'
+                  )}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors"></div>
                 </div>
                 <div className="p-5">
                   <div className="text-yellow-500 text-xs font-bold uppercase tracking-widest mb-2">

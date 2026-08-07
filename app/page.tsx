@@ -39,13 +39,13 @@ export default async function Home() {
         </div>
 
         <h1 className="text-6xl font-bold tracking-tight leading-tight max-w-4xl mb-6 text-white">
-          Matemáticas que{' '}
+          Matematicas que{' '}
           <em className="not-italic text-yellow-500">finalmente</em>
           <br />tienen sentido
         </h1>
 
         <p className="text-slate-400 text-xl max-w-xl mb-6 leading-relaxed">
-          Física, Álgebra, Cálculo y más — explicados desde la raíz.
+          Fisica, Algebra, Calculo y mas — explicados desde la raiz.
           No memorizas: <strong className="text-white">entiendes</strong>.
         </p>
 
@@ -102,7 +102,7 @@ export default async function Home() {
         {totalCursos === 0 ? (
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center">
             <div className="text-5xl mb-4">🎬</div>
-            <h3 className="text-lg font-bold text-white mb-2">Próximamente</h3>
+            <h3 className="text-lg font-bold text-white mb-2">Proximamente</h3>
             <p className="text-slate-400 text-sm">Estamos preparando los primeros cursos. Vuelve pronto.</p>
           </div>
         ) : (
@@ -113,8 +113,13 @@ export default async function Home() {
                 href={`/cursos/${c.id}`}
                 className="flex-shrink-0 w-52 bg-slate-900 border border-slate-800 rounded-xl overflow-hidden cursor-pointer hover:-translate-y-1 transition-all"
               >
-                <div className="h-28 bg-slate-800 flex items-center justify-center text-5xl">
-                  📚
+                <div className="h-28 bg-slate-800 flex items-center justify-center text-5xl overflow-hidden">
+                  {c.imagen_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={c.imagen_url} alt={c.titulo} className="w-full h-full object-cover" />
+                  ) : (
+                    '📚'
+                  )}
                 </div>
                 <div className="p-3">
                   <div className="text-yellow-500 text-xs font-bold uppercase tracking-widest mb-1">{c.categoria}</div>
