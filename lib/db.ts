@@ -91,9 +91,21 @@ export async function getComprasAlumno(alumnoId: string) {
     `)
     .eq('alumno_id', alumnoId)
     .eq('estado', 'aprobado')
+    .order('created_at', { ascending: false })
 
   if (error) console.error(error)
-  return data || []
+
+  // Deduplicar por curso_id (un alumno no deberia tener mas de una compra
+  // aprobada activa del mismo curso, pero puede pasar por datos de prueba
+  // u otras inconsistencias). Nos quedamos con la mas reciente de cada curso.
+  const vistos = new Set<string>()
+  const unicas = (data || []).filter((compra: any) => {
+    if (vistos.has(compra.curso_id)) return false
+    vistos.add(compra.curso_id)
+    return true
+  })
+
+  return unicas
 }
 
 export async function alumnoTieneCurso(alumnoId: string, cursoId: string) {
