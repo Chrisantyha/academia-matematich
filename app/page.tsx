@@ -64,10 +64,6 @@ export default async function Home() {
             <div className="text-sm text-slate-600 mt-1">Cursos</div>
           </div>
           <div className="text-center">
-            <div className="text-4xl font-bold text-yellow-500">$9</div>
-            <div className="text-sm text-slate-600 mt-1">Por curso</div>
-          </div>
-          <div className="text-center">
             <div className="text-4xl font-bold text-yellow-500">∞</div>
             <div className="text-sm text-slate-600 mt-1">Acceso de por vida</div>
           </div>

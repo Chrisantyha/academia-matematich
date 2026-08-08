@@ -60,8 +60,6 @@ export default function Navbar() {
       {/* LINKS */}
       <ul className="hidden md:flex gap-8 list-none">
         <li><Link href="/cursos" className="text-slate-400 hover:text-white text-sm font-medium transition-colors">Cursos</Link></li>
-        <li><Link href="#precios" className="text-slate-400 hover:text-white text-sm font-medium transition-colors">Precios</Link></li>
-        <li><Link href="#docentes" className="text-slate-400 hover:text-white text-sm font-medium transition-colors">Docentes</Link></li>
       </ul>
 
       {/* BOTONES */}
