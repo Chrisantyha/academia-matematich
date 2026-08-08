@@ -53,9 +53,6 @@ export default async function Home() {
           <Link href="/cursos" className="bg-yellow-500 text-black font-bold px-8 py-4 rounded-xl hover:bg-yellow-400 transition-all">
             Ver cursos
           </Link>
-          <Link href="#precios" className="border border-slate-700 text-white font-semibold px-8 py-4 rounded-xl hover:bg-slate-800 transition-colors">
-            Ver precios
-          </Link>
         </div>
 
         <div className="flex gap-12 flex-wrap justify-center">

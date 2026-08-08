@@ -97,10 +97,10 @@ export default function CursosPage() {
                   <div className="text-yellow-500 text-xs font-bold uppercase tracking-widest mb-2">
                     {c.categoria || 'Curso'}
                   </div>
-                  <h3 className="text-base font-bold mb-2 leading-snug">
+                  <h3 className="text-base font-bold mb-2 leading-snug line-clamp-2 min-h-[2.75rem]">
                     {c.titulo}
                   </h3>
-                  <p className="text-slate-400 text-sm leading-relaxed mb-4">
+                  <p className="text-slate-400 text-sm leading-relaxed mb-4 line-clamp-2 min-h-[2.5rem]">
                     {c.descripcion}
                   </p>
                   <div className="flex items-center justify-between pt-4 border-t border-slate-800">
