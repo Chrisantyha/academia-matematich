@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { createAdminSupabaseClient } from '@/lib/supabase-admin'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
 import BotonImprimir from '@/components/ui/BotonImprimir'
 import QRCertificado from '@/components/ui/QRCertificado'
 
@@ -28,6 +29,9 @@ export default async function CertificadoPage({ params }: { params: Promise<{ id
       </main>
     )
   }
+
+  const supabaseSesion = await createServerSupabaseClient()
+  const { data: { user } } = await supabaseSesion.auth.getUser()
 
   const fecha = new Date(certificado.fecha_emision).toLocaleDateString('es-ES', {
     year: 'numeric',
@@ -117,10 +121,10 @@ export default async function CertificadoPage({ params }: { params: Promise<{ id
         <div className="flex gap-4 justify-center mt-8 flex-wrap">
           <BotonImprimir />
           <Link
-            href="/alumno"
+            href={user ? '/alumno' : '/'}
             className="border border-slate-700 text-white font-semibold px-8 py-3 rounded-xl hover:bg-slate-800 transition-colors"
           >
-            Volver al dashboard
+            {user ? 'Volver al dashboard' : 'Conocer ExactaLab'}
           </Link>
         </div>
 
