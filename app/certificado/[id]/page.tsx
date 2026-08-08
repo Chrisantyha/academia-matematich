@@ -58,7 +58,7 @@ export default async function CertificadoPage({ params }: { params: Promise<{ id
             <div className="text-6xl mb-4">🎓</div>
 
             <div className="text-yellow-500 text-xs font-bold uppercase tracking-widest mb-4">
-              Certificado de Completación
+              Certificado de Finalización y Aprobación
             </div>
 
             <h1 className="text-2xl font-bold mb-2 text-slate-300">

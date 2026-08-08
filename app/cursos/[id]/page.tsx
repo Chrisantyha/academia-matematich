@@ -192,7 +192,7 @@ export default async function CursoPage({ params }: { params: Promise<{ id: stri
                     '✅ Acceso de por vida',
                     '✅ Video en HD protegido',
                     '✅ Ejercicios resueltos',
-                    '✅ Certificado de completación',
+                    '✅ Certificado de Finalización y Aprobación',
                     '✅ PC, Android e iOS',
                   ].map((item) => (
                     <div key={item} className="text-sm text-slate-400 py-1">{item}</div>
