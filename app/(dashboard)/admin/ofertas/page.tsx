@@ -1,53 +1,33 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import LogoutButton from '@/components/auth/LogoutButton'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { createAdminSupabaseClient } from '@/lib/supabase-admin'
 import { getPerfil } from '@/lib/db'
-import TablaUsuarios from '@/components/admin/TablaUsuarios'
+import { actualizarConfiguracionOfertas } from '@/lib/actions/configuracion'
 
-export default async function UsuariosAdmin() {
+export default async function OfertasAdmin() {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
-    return (
-      <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
-        <p className="text-slate-400">Debes iniciar sesión.</p>
-      </main>
-    )
+    redirect('/login')
   }
 
   const perfil = await getPerfil(user.id)
-  const nombre = perfil?.nombre || user.email?.split('@')[0] || 'Administrador'
 
   if (perfil?.rol !== 'admin') {
-    return (
-      <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
-        <p className="text-slate-400">No autorizado.</p>
-      </main>
-    )
+    redirect(perfil?.rol === 'docente' ? '/docente' : '/alumno')
   }
+
+  const nombre = perfil?.nombre || user.email?.split('@')[0] || 'Administrador'
 
   const admin = createAdminSupabaseClient()
-
-  const [{ data: usuarios }, { data: cursos }] = await Promise.all([
-    admin
-      .from('perfiles')
-      .select('id, nombre, email, rol, created_at')
-      .order('created_at', { ascending: false }),
-    admin.from('cursos').select('docente_id'),
-  ])
-
-  const cursosPorDocente = new Map<string, number>()
-  for (const c of cursos || []) {
-    if (!c.docente_id) continue
-    cursosPorDocente.set(c.docente_id, (cursosPorDocente.get(c.docente_id) || 0) + 1)
-  }
-
-  const usuariosConDatos = (usuarios || []).map((u) => ({
-    ...u,
-    totalCursos: cursosPorDocente.get(u.id) || 0,
-  }))
+  const { data: config } = await admin
+    .from('configuracion_ofertas')
+    .select('*')
+    .eq('id', 1)
+    .maybeSingle()
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
@@ -76,7 +56,7 @@ export default async function UsuariosAdmin() {
           </Link>
           <Link
             href="/admin/usuarios"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg bg-yellow-500/10 text-yellow-500 font-medium text-sm border-l-2 border-yellow-500"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800/50 font-medium text-sm transition-colors"
           >
             <span>👥</span> Usuarios
           </Link>
@@ -88,7 +68,7 @@ export default async function UsuariosAdmin() {
           </Link>
           <Link
             href="/admin/ofertas"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800/50 font-medium text-sm transition-colors"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg bg-yellow-500/10 text-yellow-500 font-medium text-sm border-l-2 border-yellow-500"
           >
             <span>🎁</span> Ofertas
           </Link>
@@ -98,7 +78,20 @@ export default async function UsuariosAdmin() {
         </aside>
 
         <div className="flex-1 p-8">
-          <TablaUsuarios usuarios={usuariosConDatos} adminActualId={user.id} />
+          <form action={actualizarConfiguracionOfertas} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md">
+            <h2 className="text-base font-bold mb-1">Paquete de cursos</h2>
+            <p className="text-slate-400 text-sm mb-6">Los alumnos podrán armar un paquete de varios cursos con descuento.</p>
+
+            <label className="block text-xs text-slate-500 uppercase tracking-widest font-bold mb-2">Descuento (%)</label>
+            <input type="number" name="descuento" defaultValue={config?.descuento_paquete_porcentaje ?? 15} min="0" max="100" step="0.1" className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500 mb-4" />
+
+            <label className="block text-xs text-slate-500 uppercase tracking-widest font-bold mb-2">Cursos mínimos en el paquete</label>
+            <input type="number" name="minCursos" defaultValue={config?.paquete_min_cursos ?? 3} min="2" step="1" className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500 mb-6" />
+
+            <button type="submit" className="bg-yellow-500 text-black font-bold px-6 py-2.5 rounded-xl hover:bg-yellow-400 transition-colors text-sm">
+              Guardar cambios
+            </button>
+          </form>
         </div>
 
       </div>
