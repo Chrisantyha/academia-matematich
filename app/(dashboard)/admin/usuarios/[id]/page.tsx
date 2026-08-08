@@ -5,7 +5,7 @@ import BotonConfirmar from '@/components/admin/BotonConfirmar'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { createAdminSupabaseClient } from '@/lib/supabase-admin'
 import { getPerfil } from '@/lib/db'
-import { revocarCompra, resetearIntentoExamen, resetearProgresoCurso } from '@/lib/actions/admin-alumno'
+import { revocarCompra, resetearIntentoExamen, resetearProgresoCurso, eliminarCertificado } from '@/lib/actions/admin-alumno'
 
 const ROL_LABEL: Record<string, string> = {
   admin: 'Administrador',
@@ -319,13 +319,25 @@ export default async function DetalleAlumnoAdmin({
             ) : (
               <div className="divide-y divide-slate-800">
                 {certificados.map((cert: any) => (
-                  <div key={cert.id} className="px-6 py-4">
-                    <div className="font-semibold text-sm">{cert.cursos?.titulo || 'Curso'}</div>
-                    <div className="text-slate-500 text-xs mt-1">
-                      Emitido el {new Date(cert.fecha_emision).toLocaleDateString('es-EC', { year: 'numeric', month: 'short', day: 'numeric' })}
-                      {' · '}
-                      <span className="font-mono text-yellow-500">{cert.codigo_verificacion}</span>
+                  <div key={cert.id} className="px-6 py-4 flex items-center justify-between gap-4 flex-wrap">
+                    <div>
+                      <div className="font-semibold text-sm">{cert.cursos?.titulo || 'Curso'}</div>
+                      <div className="text-slate-500 text-xs mt-1">
+                        Emitido el {new Date(cert.fecha_emision).toLocaleDateString('es-EC', { year: 'numeric', month: 'short', day: 'numeric' })}
+                        {' · '}
+                        <span className="font-mono text-yellow-500">{cert.codigo_verificacion}</span>
+                      </div>
                     </div>
+                    <form action={eliminarCertificado}>
+                      <input type="hidden" name="certificadoId" value={cert.id} />
+                      <input type="hidden" name="alumnoId" value={id} />
+                      <BotonConfirmar
+                        mensaje={`¿Eliminar el certificado de "${cert.cursos?.titulo || 'este curso'}"? Esta acción no se puede deshacer.`}
+                        className="text-red-400 text-xs font-semibold hover:text-red-300 transition-colors"
+                      >
+                        Eliminar certificado
+                      </BotonConfirmar>
+                    </form>
                   </div>
                 ))}
               </div>

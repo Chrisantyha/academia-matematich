@@ -65,6 +65,23 @@ export async function resetearIntentoExamen(formData: FormData) {
   revalidatePath(`/admin/usuarios/${alumnoId}`)
 }
 
+export async function eliminarCertificado(formData: FormData) {
+  if (!(await verificarAdmin('eliminarCertificado'))) return
+
+  const certificadoId = formData.get('certificadoId') as string
+  const alumnoId = formData.get('alumnoId') as string
+
+  const admin = createAdminSupabaseClient()
+  const { error } = await admin.from('certificados').delete().eq('id', certificadoId)
+
+  if (error) {
+    console.error('eliminarCertificado: error al eliminar el certificado', error)
+    return
+  }
+
+  revalidatePath(`/admin/usuarios/${alumnoId}`)
+}
+
 export async function resetearProgresoCurso(formData: FormData) {
   if (!(await verificarAdmin('resetearProgresoCurso'))) return
 
