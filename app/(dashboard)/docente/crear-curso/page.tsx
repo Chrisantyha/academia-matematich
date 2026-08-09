@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 
-const niveles = ['bachillerato', 'universitario', 'posgrado']
+const niveles = ['kids', 'bachillerato', 'universitario', 'posgrado']
 
 export default function CrearCursoPage() {
   const router = useRouter()
