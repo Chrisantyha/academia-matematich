@@ -1,6 +1,18 @@
 import Link from 'next/link'
 import Navbar from '@/components/layout/Navbar'
+import Latex from '@/components/ui/Latex'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+
+const formulasTicker = [
+  '2 + 3 = 5',
+  '10 - 4 = 6',
+  '4 \\times 6 = 24',
+  '12 \\div 3 = 4',
+  '\\sqrt{16} = 4',
+  '7 + 8 = 15',
+  '5 \\times 5 = 25',
+  '\\frac{1}{2} + \\frac{1}{2} = 1',
+]
 
 // Estrellas fijas (sin animación), posiciones y tamaños pseudo-aleatorios pero deterministas
 const estrellas = Array.from({ length: 60 }).map((_, i) => ({
@@ -84,7 +96,18 @@ export default async function KidsPage() {
 
         </section>
 
-        
+        <div className="overflow-hidden border-y border-white/10 bg-white/5 py-3">
+          <div className="flex gap-16 whitespace-nowrap animate-ticker w-max">
+            {[...formulasTicker, ...formulasTicker].map((formula, index) => (
+              <span
+                key={index}
+                className={`text-sm ${index % 2 === 0 ? 'text-white/40' : 'text-amber-300'}`}
+              >
+                <Latex formula={formula} />
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
 
     </main>

@@ -1,6 +1,18 @@
 import Link from 'next/link'
 import Navbar from '@/components/layout/Navbar'
+import Latex from '@/components/ui/Latex'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+
+const formulasTicker = [
+  'x^2 + 5x + 6 = 0',
+  '\\sin(\\theta) = \\frac{opuesto}{hipotenusa}',
+  'a^2 + b^2 = c^2',
+  '\\log_2(8) = 3',
+  '(a+b)^2 = a^2 + 2ab + b^2',
+  '\\pi r^2',
+  'P(A) = \\frac{casos\\ favorables}{casos\\ totales}',
+  'y = mx + b',
+]
 
 export default async function BachilleratoPage() {
   const supabase = await createServerSupabaseClient()
@@ -57,6 +69,19 @@ export default async function BachilleratoPage() {
         </div>
 
       </section>
+
+      <div className="overflow-hidden border-y border-slate-800 bg-slate-900 py-3">
+        <div className="flex gap-16 whitespace-nowrap animate-ticker w-max">
+          {[...formulasTicker, ...formulasTicker].map((formula, index) => (
+            <span
+              key={index}
+              className={`text-sm ${index % 2 === 0 ? 'text-slate-500' : 'text-yellow-500'}`}
+            >
+              <Latex formula={formula} />
+            </span>
+          ))}
+        </div>
+      </div>
 
       
 
