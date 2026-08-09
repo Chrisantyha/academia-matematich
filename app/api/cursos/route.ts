@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const supabase = await createServerSupabaseClient()
+    const { searchParams } = new URL(request.url)
+    const nivel = searchParams.get('nivel')
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('cursos')
       .select(`
         *,
@@ -13,6 +15,18 @@ export async function GET() {
       `)
       .eq('estado', 'publicado')
       .order('created_at', { ascending: false })
+
+    // Filtro opcional por bloque/nivel. "universitario" incluye tambien
+    // "posgrado" (mismo bloque de marca ExactaLab Universitario).
+    if (nivel === 'universitario') {
+      query = query.in('nivel', ['universitario', 'posgrado'])
+    } else if (nivel === 'bachillerato') {
+      query = query.eq('nivel', 'bachillerato')
+    } else if (nivel === 'kids') {
+      query = query.eq('nivel', 'kids')
+    }
+
+    const { data, error } = await query
 
     if (error) {
       console.error(error)
