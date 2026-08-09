@@ -13,14 +13,13 @@ const estrellas = Array.from({ length: 60 }).map((_, i) => ({
 export default async function KidsPage() {
   const supabase = await createServerSupabaseClient()
 
-  const { data: cursos } = await supabase
+  const { count } = await supabase
     .from('cursos')
-    .select('*')
-    .eq('estado', 'publicado')
+    .select('*', { count: 'exact', head: true })
+    .or('estado.eq.publicado,visible_proximamente.eq.true')
     .eq('nivel', 'kids')
-    .order('created_at', { ascending: false })
 
-  const totalCursos = cursos?.length || 0
+  const totalCursos = count || 0
 
   return (
     <main className="min-h-screen bg-[#0d0b26] relative overflow-hidden">
@@ -85,51 +84,7 @@ export default async function KidsPage() {
 
         </section>
 
-        <section className="px-8 py-16">
-
-          <div className="flex items-center justify-between mb-6 max-w-6xl mx-auto">
-            <h2 className="text-xl font-bold text-white">Cursos disponibles</h2>
-            <Link href="/kids/cursos" className="text-sm text-amber-300 font-semibold">Ver todos</Link>
-          </div>
-
-          <div className="max-w-6xl mx-auto">
-            {totalCursos === 0 ? (
-              <div className="bg-white/5 border border-white/10 rounded-2xl p-12 text-center">
-                <div className="text-5xl mb-4">🚀</div>
-                <h3 className="text-lg font-bold text-white mb-2">Próximamente</h3>
-                <p className="text-white/60 text-sm">Estamos preparando los primeros cursos de ExactaKids. Vuelve pronto.</p>
-              </div>
-            ) : (
-              <div className="flex gap-4 overflow-x-auto pb-3">
-                {cursos!.map((c: any) => (
-                  <Link
-                    key={c.id}
-                    href={`/cursos/${c.id}`}
-                    className="flex-shrink-0 w-52 bg-white/5 border border-white/10 rounded-xl overflow-hidden cursor-pointer hover:-translate-y-1 transition-all"
-                  >
-                    <div className="h-28 bg-white/10 flex items-center justify-center text-5xl overflow-hidden">
-                      {c.imagen_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={c.imagen_url} alt={c.titulo} className="w-full h-full object-cover" />
-                      ) : (
-                        '🚀'
-                      )}
-                    </div>
-                    <div className="p-3">
-                      <div className="text-amber-300 text-xs font-bold uppercase tracking-widest mb-1">{c.categoria}</div>
-                      <div className="text-sm font-semibold text-white leading-snug mb-3">{c.titulo}</div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-amber-300 font-bold">${c.precio}</span>
-                        <span className="text-white/40 text-xs">{c.nivel}</span>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-
-        </section>
+        
       </div>
 
     </main>

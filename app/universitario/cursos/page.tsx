@@ -4,11 +4,11 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Navbar from '@/components/layout/Navbar'
 
-const categorias = ['Todos', 'Calculo', 'Algebra', 'Fisica', 'Estadistica', 'EDO']
+
 
 export default function CursosUniversitarioPage() {
   const [cursos, setCursos] = useState<any[]>([])
-  const [filtro, setFiltro] = useState('Todos')
+  const [busqueda, setBusqueda] = useState('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -21,9 +21,14 @@ export default function CursosUniversitarioPage() {
     cargarCursos()
   }, [])
 
-  const cursosFiltrados = filtro === 'Todos'
+  const texto = busqueda.trim().toLowerCase()
+  const cursosFiltrados = texto === ''
     ? cursos
-    : cursos.filter(c => c.categoria === filtro)
+    : cursos.filter(c =>
+        (c.titulo || '').toLowerCase().includes(texto) ||
+        (c.descripcion || '').toLowerCase().includes(texto) ||
+        (c.categoria || '').toLowerCase().includes(texto)
+      )
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
@@ -46,21 +51,15 @@ export default function CursosUniversitarioPage() {
 
       <div className="max-w-6xl mx-auto px-8 py-10">
 
-        {/* FILTROS */}
-        <div className="flex gap-3 flex-wrap mb-10">
-          {categorias.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setFiltro(cat)}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold border transition-colors ${
-                filtro === cat
-                  ? 'bg-yellow-500 text-black border-yellow-500'
-                  : 'bg-transparent text-slate-400 border-slate-700 hover:border-slate-500 hover:text-white'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
+        {/* BUSCADOR */}
+        <div className="mb-10">
+          <input
+            type="text"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Buscar por curso o tema (ej: cálculo, álgebra...)"
+            className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-yellow-500 transition-colors"
+          />
         </div>
 
         {/* CURSOS */}
@@ -73,18 +72,18 @@ export default function CursosUniversitarioPage() {
           <div className="text-center py-24">
             <div className="text-5xl mb-4">📚</div>
             <h2 className="text-xl font-bold mb-2">
-              {filtro === 'Todos' ? 'Aún no hay cursos publicados' : `No hay cursos de ${filtro}`}
+              {texto === '' ? 'Aún no hay cursos publicados' : `No hay cursos que coincidan con "${busqueda}"`}
             </h2>
             <p className="text-slate-400 text-sm">Los cursos aparecerán aquí pronto.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {cursosFiltrados.map((c: any) => (
               <div
                 key={c.id}
-                className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden cursor-pointer hover:-translate-y-1 hover:border-yellow-500/40 transition-all group"
+                className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden cursor-pointer hover:-translate-y-1 hover:border-yellow-500/40 transition-all group flex flex-col h-full min-h-[320px]"
               >
-                <div className="h-36 bg-slate-800 flex items-center justify-center text-6xl relative overflow-hidden">
+                <div className="h-28 bg-slate-800 flex items-center justify-center text-5xl relative overflow-hidden shrink-0">
                   {c.imagen_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={c.imagen_url} alt={c.titulo} className="w-full h-full object-cover" />
@@ -93,14 +92,14 @@ export default function CursosUniversitarioPage() {
                   )}
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors"></div>
                 </div>
-                <div className="p-5">
+                <div className="p-5 flex flex-col flex-1">
                   <div className="text-yellow-500 text-xs font-bold uppercase tracking-widest mb-2">
                     {c.categoria || 'Curso'}
                   </div>
-                  <h3 className="text-base font-bold mb-2 leading-snug">
+                  <h3 className="text-base font-bold mb-2 leading-snug line-clamp-2">
                     {c.titulo}
                   </h3>
-                  <p className="text-slate-400 text-sm leading-relaxed mb-4">
+                  <p className="text-slate-400 text-sm leading-relaxed mb-4 line-clamp-3 flex-1">
                     {c.descripcion}
                   </p>
                   <div className="flex items-center justify-between pt-4 border-t border-slate-800">

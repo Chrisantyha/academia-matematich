@@ -13,8 +13,8 @@ export async function GET(request: Request) {
         *,
         perfiles (nombre)
       `)
-      .eq('estado', 'publicado')
-      .order('created_at', { ascending: false })
+      .or('estado.eq.publicado,visible_proximamente.eq.true')
+      .order('orden', { ascending: true })
 
     // Filtro opcional por bloque/nivel. "universitario" incluye tambien
     // "posgrado" (mismo bloque de marca ExactaLab Universitario).
