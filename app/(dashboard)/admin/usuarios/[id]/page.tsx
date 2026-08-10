@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import LogoutButton from '@/components/auth/LogoutButton'
 import BotonConfirmar from '@/components/admin/BotonConfirmar'
+import FormCredenciales from '@/components/admin/FormCredenciales'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { createAdminSupabaseClient } from '@/lib/supabase-admin'
 import { getPerfil } from '@/lib/db'
@@ -185,6 +186,19 @@ export default async function DetalleAlumnoAdmin({
             <p className="text-slate-500 text-xs mt-2">
               Registrado el {new Date(alumno.created_at).toLocaleDateString('es-EC', { year: 'numeric', month: 'long', day: 'numeric' })}
             </p>
+          </div>
+
+          {/* CREDENCIALES */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden mb-6">
+            <div className="px-6 py-4 border-b border-slate-800">
+              <h2 className="text-base font-bold">Credenciales de acceso</h2>
+              <p className="text-slate-500 text-xs mt-1">
+                Cambia el correo o la contraseña con la que esta persona inicia sesión. Úsalo si perdió acceso a su correo original.
+              </p>
+            </div>
+            <div className="p-6">
+              <FormCredenciales usuarioId={alumno.id} emailActual={alumno.email} />
+            </div>
           </div>
 
           {/* COMPRAS */}

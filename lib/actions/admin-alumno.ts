@@ -116,3 +116,51 @@ export async function resetearProgresoCurso(formData: FormData) {
 
   revalidatePath(`/admin/usuarios/${alumnoId}`)
 }
+
+
+export async function actualizarCredenciales(formData: FormData) {
+  if (!(await verificarAdmin('actualizarCredenciales'))) {
+    return { error: 'No autorizado.' }
+  }
+
+  const usuarioId = formData.get('usuarioId') as string
+  const nuevoEmail = (formData.get('nuevoEmail') as string)?.trim()
+  const nuevaClave = (formData.get('nuevaClave') as string)?.trim()
+
+  if (!nuevoEmail && !nuevaClave) {
+    return { error: 'Debes indicar un nuevo correo, una nueva contraseña, o ambos.' }
+  }
+
+  if (nuevaClave && nuevaClave.length < 8) {
+    return { error: 'La contraseña debe tener al menos 8 caracteres.' }
+  }
+
+  const admin = createAdminSupabaseClient()
+
+  const updatePayload: { email?: string; password?: string } = {}
+  if (nuevoEmail) updatePayload.email = nuevoEmail
+  if (nuevaClave) updatePayload.password = nuevaClave
+
+  const { error: errorAuth } = await admin.auth.admin.updateUserById(usuarioId, updatePayload)
+
+  if (errorAuth) {
+    console.error('actualizarCredenciales: error al actualizar en Auth', errorAuth)
+    return { error: 'No se pudo actualizar en el sistema de autenticación: ' + errorAuth.message }
+  }
+
+  // Si cambió el email, sincronizar la copia en perfiles
+  if (nuevoEmail) {
+    const { error: errorPerfil } = await admin
+      .from('perfiles')
+      .update({ email: nuevoEmail })
+      .eq('id', usuarioId)
+
+    if (errorPerfil) {
+      console.error('actualizarCredenciales: error al sincronizar perfiles.email', errorPerfil)
+      return { error: 'El correo se actualizó en el login, pero no se pudo sincronizar en el perfil. Contacta soporte técnico.' }
+    }
+  }
+
+  revalidatePath(`/admin/usuarios/${usuarioId}`)
+  return { success: true }
+}
