@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import LogoutButton from '@/components/auth/LogoutButton'
 import AutoRefresh from '@/components/admin/AutoRefresh'
+import BotonConfirmar from '@/components/admin/BotonConfirmar'
+import { alternarPublicacionCurso } from '@/lib/actions/admin-curso'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getPerfil } from '@/lib/db'
 
@@ -196,6 +198,7 @@ export default async function AdminDashboard() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-800">
+                    <th className="text-left px-6 py-3 text-xs text-slate-500 font-bold uppercase tracking-widest">#</th>
                     <th className="text-left px-6 py-3 text-xs text-slate-500 font-bold uppercase tracking-widest">Curso</th>
                     <th className="text-left px-6 py-3 text-xs text-slate-500 font-bold uppercase tracking-widest">Docente</th>
                     <th className="text-left px-6 py-3 text-xs text-slate-500 font-bold uppercase tracking-widest">Lecciones</th>
@@ -203,11 +206,13 @@ export default async function AdminDashboard() {
                     <th className="text-left px-6 py-3 text-xs text-slate-500 font-bold uppercase tracking-widest">Estado</th>
                     <th className="text-left px-6 py-3 text-xs text-slate-500 font-bold uppercase tracking-widest">Ingresos</th>
                     <th className="text-left px-6 py-3 text-xs text-slate-500 font-bold uppercase tracking-widest">Acción</th>
+                    <th className="text-left px-6 py-3 text-xs text-slate-500 font-bold uppercase tracking-widest">Publicar</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {cursosConDatos.map((c) => (
+                  {cursosConDatos.map((c, index) => (
                     <tr key={c.id} className="border-b border-slate-800 hover:bg-slate-800/50 transition-colors">
+                      <td className="px-6 py-4 text-slate-500 font-mono text-xs">{index + 1}</td>
                       <td className="px-6 py-4 font-semibold">{c.titulo}</td>
                       <td className="px-6 py-4 text-slate-400">{c.docenteNombre}</td>
                       <td className="px-6 py-4 text-slate-400">{c.lecciones}</td>
@@ -242,6 +247,26 @@ export default async function AdminDashboard() {
                         ) : (
                           <span className="text-slate-600 text-xs">Borrador</span>
                         )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <form action={alternarPublicacionCurso}>
+                          <input type="hidden" name="cursoId" value={c.id} />
+                          <input type="hidden" name="estadoActual" value={c.estado} />
+                          <BotonConfirmar
+                            mensaje={
+                              c.estado === 'publicado'
+                                ? `¿Despublicar "${c.titulo}"? Dejará de ser visible y comprable para los alumnos.`
+                                : `¿Publicar "${c.titulo}"? Será visible y comprable de inmediato.`
+                            }
+                            className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${
+                              c.estado === 'publicado'
+                                ? 'bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20'
+                                : 'bg-green-500/10 text-green-400 border border-green-500/30 hover:bg-green-500/20'
+                            }`}
+                          >
+                            {c.estado === 'publicado' ? 'Despublicar' : 'Publicar'}
+                          </BotonConfirmar>
+                        </form>
                       </td>
                     </tr>
                   ))}

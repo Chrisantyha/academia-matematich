@@ -7,11 +7,16 @@ import { createClient } from '@/lib/supabase'
 
 const niveles = ['kids', 'bachillerato', 'universitario', 'posgrado']
 
+// "kids" usa categorias de nivel 'kids'; el resto usa las de nivel 'general'
+function nivelCategoria(nivel: string) {
+  return nivel === 'kids' ? 'kids' : 'general'
+}
+
 export default function CrearCursoPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [categorias, setCategorias] = useState<string[]>([])
+  const [todasCategorias, setTodasCategorias] = useState<{ nombre: string; nivel: string }[]>([])
   const [form, setForm] = useState({
     titulo: '',
     descripcion: '',
@@ -25,15 +30,24 @@ export default function CrearCursoPage() {
       const supabase = createClient()
       const { data } = await supabase
         .from('categorias')
-        .select('nombre')
+        .select('nombre, nivel')
         .order('nombre', { ascending: true })
 
-      const nombres = (data || []).map((c) => c.nombre)
-      setCategorias(nombres)
-      setForm((f) => ({ ...f, categoria: f.categoria || nombres[0] || '' }))
+      setTodasCategorias(data || [])
     }
     cargarCategorias()
   }, [])
+
+  const categorias = todasCategorias
+    .filter((c) => c.nivel === nivelCategoria(form.nivel))
+    .map((c) => c.nombre)
+
+  // Si cambia el nivel del curso y la categoria seleccionada ya no aplica, resetea
+  useEffect(() => {
+    if (categorias.length > 0 && !categorias.includes(form.categoria)) {
+      setForm((f) => ({ ...f, categoria: categorias[0] }))
+    }
+  }, [form.nivel, todasCategorias])
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -136,23 +150,8 @@ export default function CrearCursoPage() {
             />
           </div>
 
-          {/* CATEGORIA Y NIVEL */}
+          {/* NIVEL Y CATEGORIA */}
           <div className="grid grid-cols-2 gap-4 mb-6">
-            <div>
-              <label className="block text-sm font-semibold text-slate-300 mb-2">
-                Categoría
-              </label>
-              <select
-                name="categoria"
-                value={form.categoria}
-                onChange={handleChange}
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 transition-colors"
-              >
-                {categorias.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
             <div>
               <label className="block text-sm font-semibold text-slate-300 mb-2">
                 Nivel
@@ -165,6 +164,21 @@ export default function CrearCursoPage() {
               >
                 {niveles.map((n) => (
                   <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-slate-300 mb-2">
+                Categoría
+              </label>
+              <select
+                name="categoria"
+                value={form.categoria}
+                onChange={handleChange}
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 transition-colors"
+              >
+                {categorias.map((c) => (
+                  <option key={c} value={c}>{c}</option>
                 ))}
               </select>
             </div>
