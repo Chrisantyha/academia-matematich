@@ -38,7 +38,7 @@ export default function CursosKidsPage() {
       )
 
   return (
-    <main className="min-h-screen bg-[#0d0b26] text-white relative overflow-hidden">
+    <main className="min-h-screen bg-slate-950 text-white relative overflow-hidden">
 
       {/* Estrellas de fondo, baja opacidad, sin movimiento */}
       <div className="absolute inset-0 pointer-events-none">
@@ -63,7 +63,7 @@ export default function CursosKidsPage() {
         {/* HEADER */}
         <div className="pt-28 pb-12 px-8 border-b border-white/10">
           <div className="max-w-6xl mx-auto">
-            <div className="text-xs font-bold uppercase tracking-widest text-amber-300 mb-3">
+            <div className="text-xs font-bold uppercase tracking-widest text-yellow-500 mb-3">
               ExactaKids
             </div>
             <h1 className="text-4xl font-bold tracking-tight mb-3">
@@ -84,7 +84,7 @@ export default function CursosKidsPage() {
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               placeholder="Buscar por curso o tema (ej: sumas, fracciones...)"
-              className="w-full max-w-md bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/40 outline-none focus:border-amber-300 transition-colors"
+              className="w-full max-w-md bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/40 outline-none focus:border-yellow-500 transition-colors"
             />
           </div>
 
@@ -112,11 +112,11 @@ export default function CursosKidsPage() {
                     className={`bg-white/5 border rounded-2xl overflow-hidden transition-all group relative flex flex-col h-full min-h-[320px] ${
                       esProximamente
                         ? 'border-white/10 opacity-70'
-                        : 'border-white/10 cursor-pointer hover:-translate-y-1 hover:border-amber-300/40'
+                        : 'border-white/10 cursor-pointer hover:-translate-y-1 hover:border-yellow-500/40'
                     }`}
                   >
                     {esProximamente && (
-                      <span className="absolute top-3 right-3 z-10 bg-amber-300/90 text-[#0d0b26] text-xs font-bold uppercase tracking-wide px-3 py-1 rounded-full">
+                      <span className="absolute top-3 right-3 z-10 bg-yellow-500/90 text-[#0d0b26] text-xs font-bold uppercase tracking-wide px-3 py-1 rounded-full">
                         Próximamente
                       </span>
                     )}
@@ -132,7 +132,7 @@ export default function CursosKidsPage() {
                       )}
                     </div>
                     <div className="p-5 flex flex-col flex-1">
-                      <div className="text-amber-300 text-xs font-bold uppercase tracking-widest mb-2">
+                      <div className="text-yellow-500 text-xs font-bold uppercase tracking-widest mb-2">
                         {c.categoria || 'Curso'}
                       </div>
                       <h3 className="text-base font-bold mb-2 leading-snug line-clamp-2">
@@ -149,13 +149,13 @@ export default function CursosKidsPage() {
                         <>
                           <div className="flex items-center justify-between pt-4 border-t border-white/10">
                             <div>
-                              <span className="text-amber-300 text-xl font-bold">${c.precio}</span>
+                              <span className="text-yellow-500 text-xl font-bold">${c.precio}</span>
                               <span className="text-white/40 text-xs ml-2">acceso de por vida</span>
                             </div>
                           </div>
                           <Link
                             href={`/cursos/${c.id}`}
-                            className="block w-full mt-4 bg-amber-300 text-[#0d0b26] font-bold py-2.5 rounded-xl hover:bg-amber-200 transition-colors text-sm text-center"
+                            className="block w-full mt-4 bg-yellow-500 text-[#0d0b26] font-bold py-2.5 rounded-xl hover:bg-yellow-400 transition-colors text-sm text-center"
                           >
                             Ver curso
                           </Link>

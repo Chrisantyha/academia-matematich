@@ -26,30 +26,30 @@ export default async function Home() {
   const totalCursos = count || 0
 
   return (
-    <main className="min-h-screen bg-slate-950">
+    <main className="min-h-screen bg-slate-950 bg-grid-math">
 
       <Navbar />
 
       <section className="flex flex-col items-center justify-center text-center px-6 pt-40 pb-24">
 
-        <div className="inline-flex items-center gap-2 border border-yellow-500 text-yellow-500 px-4 py-1 rounded-full text-xs font-bold uppercase mb-8">
+        <div className="animate-fade-in inline-flex items-center gap-2 border border-yellow-500 text-yellow-500 px-4 py-1 rounded-full text-xs font-bold uppercase mb-8">
           <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
           ExactaLab Universitario · LATAM
         </div>
 
-        <h1 className="text-6xl font-bold tracking-tight leading-tight max-w-4xl mb-6 text-white">
+        <h1 className="animate-fade-in-delay-1 text-6xl font-bold tracking-tight leading-tight max-w-4xl mb-6 text-white">
           Matemáticas que{' '}
           <em className="not-italic text-yellow-500">finalmente</em>
           <br />tienen sentido
         </h1>
 
-        <p className="text-slate-400 text-xl max-w-xl mb-6 leading-relaxed">
+        <p className="animate-fade-in-delay-2 text-slate-400 text-xl max-w-xl mb-6 leading-relaxed">
           Física, Álgebra, Cálculo y más — explicados desde la raíz.
           No memorizas: <strong className="text-white">entiendes</strong>.
         </p>
 
-        <div className="flex gap-4 flex-wrap justify-center mb-16">
-          <Link href="/cursos" className="bg-yellow-500 text-black font-bold px-8 py-4 rounded-xl hover:bg-yellow-400 transition-all">
+        <div className="animate-fade-in-delay-3 flex gap-4 flex-wrap justify-center mb-16">
+          <Link href="/universitario/cursos" className="bg-yellow-500 text-black font-bold px-8 py-4 rounded-xl hover:bg-yellow-400 transition-all">
             Ver cursos
           </Link>
         </div>

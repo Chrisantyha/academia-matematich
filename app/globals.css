@@ -43,3 +43,61 @@ input:-webkit-autofill:focus {
 .animate-ticker {
   animation: scroll-ticker 25s linear infinite;
 }
+
+
+
+@keyframes scroll-ticker {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-ticker {
+  animation: scroll-ticker 25s linear infinite;
+}
+
+/* Fade-in + slide-up al cargar (hero de landings) */
+@keyframes fade-slide-up {
+  0% {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-slide-up 1s ease-out both;
+}
+
+.animate-fade-in-delay-1 {
+  animation: fade-slide-up 1s ease-out 0.25s both;
+}
+
+.animate-fade-in-delay-2 {
+  animation: fade-slide-up 1s ease-out 0.5s both;
+}
+
+.animate-fade-in-delay-3 {
+  animation: fade-slide-up 1s ease-out 0.75s both;
+}
+
+/* Parpadeo sutil de estrellas (solo opacidad, sin desplazamiento) */
+@keyframes star-twinkle {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.9; }
+}
+
+.animate-twinkle {
+  animation: star-twinkle 2.5s ease-in-out infinite;
+}
+
+
+/* Cuadricula sutil de fondo, tipo papel milimetrado */
+.bg-grid-math {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+}

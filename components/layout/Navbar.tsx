@@ -87,14 +87,13 @@ export default function Navbar() {
   const cursosHref = bloque ? `/${bloque}/cursos` : '/cursos'
   const bloqueActual = bloques.find((b) => b.id === bloque)
 
-  const esKids = bloque === 'kids'
-  const acento = esKids ? 'text-amber-300' : 'text-yellow-500'
-  const acentoBg = esKids ? 'bg-amber-300 hover:bg-amber-200' : 'bg-yellow-500 hover:bg-yellow-400'
-  const fondoNav = esKids ? 'bg-[#0d0b26]/90 border-white/10' : 'bg-slate-950/90 border-slate-800'
-  const textoSecundario = esKids ? 'text-white/60 hover:text-white' : 'text-slate-400 hover:text-white'
-  const textoBoton = esKids ? 'text-white border-white/20 hover:bg-white/10' : 'text-white border-slate-700 hover:bg-slate-800'
-  const dropdownFondo = esKids ? 'bg-[#15123a] border-white/10' : 'bg-slate-900 border-slate-800'
-  const dropdownHover = esKids ? 'hover:bg-white/5' : 'hover:bg-slate-800'
+  const acento = 'text-yellow-500'
+  const acentoBg = 'bg-yellow-500 hover:bg-yellow-400'
+  const fondoNav = 'bg-slate-950/90 border-slate-800'
+  const textoSecundario = 'text-slate-400 hover:text-white'
+  const textoBoton = 'text-white border-slate-700 hover:bg-slate-800'
+  const dropdownFondo = 'bg-slate-900 border-slate-800'
+  const dropdownHover = 'hover:bg-slate-800'
 
   return (
     <nav className={`fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-10 py-4 backdrop-blur-md border-b ${fondoNav}`}>
@@ -102,7 +101,7 @@ export default function Navbar() {
       {/* LOGO + INICIO */}
       <div className="flex items-center gap-5">
         <Link href="/" className="font-bold text-xl tracking-tight text-white">
-          Exacta<span className={acento}>{esKids ? 'Kids' : 'Lab'}</span>
+          Exacta<span className={acento}>Lab</span>
         </Link>
 
         {/* SELECTOR DE BLOQUE */}

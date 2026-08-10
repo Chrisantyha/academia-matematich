@@ -120,6 +120,9 @@ export default async function AlumnoDashboard() {
           <a className="flex items-center gap-3 px-3 py-2 rounded-lg bg-yellow-500/10 text-yellow-500 font-medium text-sm border-l-2 border-yellow-500">
             <span>🏠</span> Inicio
           </a>
+          <Link href="/alumno/mis-cursos" className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 font-medium text-sm cursor-pointer transition-colors">
+            <span>📖</span> Mis cursos
+          </Link>
           <Link href="/cursos" className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 font-medium text-sm cursor-pointer transition-colors">
             <span>🔍</span> Explorar
           </Link>

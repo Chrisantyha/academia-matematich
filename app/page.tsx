@@ -36,7 +36,7 @@ export default function LandingSeleccion() {
           className="group relative flex flex-col justify-between rounded-2xl border border-slate-800 p-8 min-h-[340px] overflow-hidden bg-slate-900 transition-transform hover:scale-[1.02]"
         >
           <div>
-            <span className="block text-center text-sm font-bold tracking-wide uppercase text-amber-300 mb-4">
+            <span className="block text-center text-sm font-bold tracking-wide uppercase text-yellow-500 mb-4">
               Escuela · 6-10 años
             </span>
             <h2 className="text-2xl font-bold mb-3 leading-tight text-white">
@@ -47,7 +47,7 @@ export default function LandingSeleccion() {
               junto a Nova, en un viaje por el universo de los números.
             </p>
           </div>
-          <span className="mt-6 inline-flex w-fit items-center rounded-full bg-amber-300/10 border border-amber-300/30 px-4 py-2 text-sm font-semibold text-amber-300 group-hover:bg-amber-300/20 transition-colors">
+          <span className="mt-6 inline-flex w-fit items-center rounded-full bg-yellow-500/10 border border-yellow-500/30 px-4 py-2 text-sm font-semibold text-yellow-500 group-hover:bg-yellow-500/20 transition-colors">
             Ver próximamente
           </span>
         </Link>

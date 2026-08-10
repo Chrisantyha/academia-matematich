@@ -11,30 +11,39 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
-    const { cursoId } = await request.json()
+    const { cursoId, paqueteId } = await request.json()
 
-    // Buscar la compra pendiente del alumno
-    const { data: compra } = await supabase
+    // Buscar la(s) compra(s) pendiente(s) del alumno: por paqueteId si viene,
+    // si no por cursoId (comportamiento individual de siempre)
+    let compraQuery = supabase
       .from('compras')
-      .select('id, payphone_transaction_id')
+      .select('id, payphone_transaction_id, paquete_id')
       .eq('alumno_id', user.id)
-      .eq('curso_id', cursoId)
       .eq('estado', 'pendiente')
       .order('created_at', { ascending: false })
-      .limit(1)
-      .single()
 
-    if (!compra) {
+    if (paqueteId) {
+      compraQuery = compraQuery.eq('paquete_id', paqueteId)
+    } else {
+      compraQuery = compraQuery.eq('curso_id', cursoId)
+    }
+
+    const { data: compras } = await compraQuery
+
+    if (!compras || compras.length === 0) {
       return NextResponse.json({
         ok: false,
-        error: 'No hay pagos pendientes para este curso'
+        error: paqueteId ? 'No hay pagos pendientes para este paquete' : 'No hay pagos pendientes para este curso'
       })
     }
 
-    console.log('Consultando transaccion:', compra.payphone_transaction_id)
+    // Todas las filas de un mismo paquete comparten transaction_id; para
+    // compra individual solo hay una fila. Basta consultar una vez.
+    const transactionId = compras[0].payphone_transaction_id
+    console.log('Consultando transaccion:', transactionId)
 
     // Consultar el estado en PayPhone
-    const resultado = await consultarPayphone(compra.payphone_transaction_id)
+    const resultado = await consultarPayphone(transactionId)
     console.log('Respuesta PayPhone:', JSON.stringify(resultado))
 
     const estado = resultado.transactionStatus || resultado.status
@@ -47,11 +56,13 @@ export async function POST(request: Request) {
       })
     }
 
-    // Activar la compra
+    // Activar todas las compras asociadas a esta transaccion (1 si es
+    // individual, N si es paquete)
+    const idsAActivar = compras.map((c) => c.id)
     const { error } = await supabase
       .from('compras')
       .update({ estado: 'aprobado' })
-      .eq('id', compra.id)
+      .in('id', idsAActivar)
 
     if (error) {
       console.error(error)
@@ -60,7 +71,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       ok: true,
-      mensaje: 'Pago confirmado. Acceso desbloqueado.'
+      mensaje: compras.length > 1 ? 'Pago confirmado. Acceso desbloqueado a todos los cursos del paquete.' : 'Pago confirmado. Acceso desbloqueado.'
     })
 
   } catch (error) {
