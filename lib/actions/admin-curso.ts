@@ -26,6 +26,11 @@ export async function alternarPublicacionCurso(formData: FormData) {
   const cursoId = formData.get('cursoId') as string
   const estadoActual = formData.get('estadoActual') as string
 
+  if (estadoActual === 'en_revision') {
+    console.error('alternarPublicacionCurso: intento de publicar directo un curso en revision', { cursoId })
+    return
+  }
+
   const nuevoEstado = estadoActual === 'publicado' ? 'borrador' : 'publicado'
 
   const admin = createAdminSupabaseClient()

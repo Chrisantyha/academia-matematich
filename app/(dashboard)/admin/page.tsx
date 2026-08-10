@@ -249,24 +249,28 @@ export default async function AdminDashboard() {
                         )}
                       </td>
                       <td className="px-6 py-4">
-                        <form action={alternarPublicacionCurso}>
-                          <input type="hidden" name="cursoId" value={c.id} />
-                          <input type="hidden" name="estadoActual" value={c.estado} />
-                          <BotonConfirmar
-                            mensaje={
-                              c.estado === 'publicado'
-                                ? `¿Despublicar "${c.titulo}"? Dejará de ser visible y comprable para los alumnos.`
-                                : `¿Publicar "${c.titulo}"? Será visible y comprable de inmediato.`
-                            }
-                            className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${
-                              c.estado === 'publicado'
-                                ? 'bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20'
-                                : 'bg-green-500/10 text-green-400 border border-green-500/30 hover:bg-green-500/20'
-                            }`}
-                          >
-                            {c.estado === 'publicado' ? 'Despublicar' : 'Publicar'}
-                          </BotonConfirmar>
-                        </form>
+                        {c.estado === 'en_revision' ? (
+                          <span className="text-slate-500 text-xs italic">Revisar primero →</span>
+                        ) : (
+                          <form action={alternarPublicacionCurso}>
+                            <input type="hidden" name="cursoId" value={c.id} />
+                            <input type="hidden" name="estadoActual" value={c.estado} />
+                            <BotonConfirmar
+                              mensaje={
+                                c.estado === 'publicado'
+                                  ? `¿Despublicar "${c.titulo}"? Dejará de ser visible y comprable para los alumnos.`
+                                  : `¿Publicar "${c.titulo}"? Será visible y comprable de inmediato.`
+                              }
+                              className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${
+                                c.estado === 'publicado'
+                                  ? 'bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20'
+                                  : 'bg-green-500/10 text-green-400 border border-green-500/30 hover:bg-green-500/20'
+                              }`}
+                            >
+                              {c.estado === 'publicado' ? 'Despublicar' : 'Publicar'}
+                            </BotonConfirmar>
+                          </form>
+                        )}
                       </td>
                     </tr>
                   ))}
