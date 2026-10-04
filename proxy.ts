@@ -1,6 +1,20 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+// IP real del cliente. Next quitó request.ip (v15+); Vercel manda la IP en
+// x-forwarded-for (primer valor de la lista = cliente). En local (next dev)
+// no hay ningún proxy delante, no llega este header, y la función devuelve
+// null: el bloque de "una sola sesión por cuenta" se salta solo.
+function obtenerIp(request: NextRequest): string | null {
+  const xff = request.headers.get('x-forwarded-for')
+  if (xff) {
+    const primera = xff.split(',')[0]?.trim()
+    if (primera) return primera
+  }
+  const real = request.headers.get('x-real-ip')
+  return real?.trim() || null
+}
+
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -69,6 +83,42 @@ export async function proxy(request: NextRequest) {
       .single()
 
     const rol = perfil?.rol || 'alumno'
+
+    // --- Una sola sesión activa por cuenta ---
+    // Al iniciar sesión en /login (ver app/(auth)/login/page.tsx) se guarda
+    // la IP en perfiles.ip_sesion. Si esta petición llega con sesión válida
+    // pero desde otra IP, esa sesión ya no es la más reciente: se cierra.
+    // Así, compartir usuario y contraseña obliga a los dos a estar
+    // reiniciando sesión todo el tiempo (quien entra de último "gana").
+    // Columna nueva: supabase/migraciones/2026-10-04_ip_sesion.sql. Si esa
+    // migración todavía no corrió en la base, la consulta de abajo falla y
+    // el bloque se salta solo — nunca debe tocar el cálculo de "rol" de
+    // arriba ni romper el enrutamiento por rol para nadie.
+    try {
+      const ipActual = obtenerIp(request)
+      if (ipActual) {
+        const { data: sesion, error: sesionError } = await supabase
+          .from('perfiles')
+          .select('ip_sesion')
+          .eq('id', user.id)
+          .single()
+
+        if (!sesionError && sesion?.ip_sesion && sesion.ip_sesion !== ipActual) {
+          await supabase.auth.signOut()
+          const url = new URL('/login', request.url)
+          url.searchParams.set('motivo', 'otra-conexion')
+          const response = NextResponse.redirect(url)
+          // Las cookies de sesión ya se limpiaron (signOut) en supabaseResponse;
+          // hay que copiarlas a la respuesta de redirect o el navegador no se entera.
+          supabaseResponse.cookies.getAll().forEach((c) => {
+            response.cookies.set(c.name, c.value, c)
+          })
+          return response
+        }
+      }
+    } catch (err) {
+      console.error('Verificación de IP de sesión falló (se omite):', err)
+    }
 
     // Solo admin puede entrar a /admin
     if (request.nextUrl.pathname.startsWith('/admin') && rol !== 'admin') {

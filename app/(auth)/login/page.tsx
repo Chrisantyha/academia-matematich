@@ -15,6 +15,7 @@ function LoginForm() {
   const supabase = createClient()
 
   const passwordActualizada = searchParams.get('mensaje') === 'password-actualizada'
+  const otraConexion = searchParams.get('motivo') === 'otra-conexion'
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -27,6 +28,16 @@ if (error || !data.user) {
   setError('Correo o contraseña incorrectos')
   setLoading(false)
   return
+}
+
+// Deja esta conexión como la "dueña" de la sesión (una sola sesión activa
+// por cuenta). Se espera a que termine antes de entrar al panel: si no, el
+// proxy podría revisar la ruta protegida antes de que quede registrada y
+// cerraría esta misma sesión que recién empezó.
+try {
+  await fetch('/api/auth/ip-sesion', { method: 'POST' })
+} catch (err) {
+  console.error('No se pudo registrar la IP de la sesión:', err)
 }
 
 // Si este es el primer inicio de sesion del usuario (recien confirmo su
@@ -79,6 +90,12 @@ const { data: perfil } = await supabase
           {passwordActualizada && (
             <div className="bg-green-500/10 border border-green-500/30 text-green-400 text-sm px-4 py-3 rounded-xl mb-5">
               Tu contraseña se actualizó correctamente. Inicia sesión con la nueva contraseña.
+            </div>
+          )}
+
+          {otraConexion && (
+            <div className="bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 text-sm px-4 py-3 rounded-xl mb-5">
+              Esta cuenta inició sesión desde otra conexión, así que cerramos esta sesión. Si fuiste tú, vuelve a iniciar sesión.
             </div>
           )}
 

@@ -25,6 +25,13 @@ interface Pregunta {
 
 type VistaPrevia = { texto: string; respuesta: string } | { error: string }
 
+// Tipos que acepta la importación desde archivo (preguntas fijas; las
+// plantillas no se importan, se crean a mano con sus rangos).
+const TIPOS_FIJOS_VALIDOS: TipoPregunta[] = [
+  'opcion_multiple', 'verdadero_falso', 'numerica', 'par_numerico',
+  'texto_algebraico', 'radical', 'raices_cuadratica', 'fraccion_algebraica',
+]
+
 const TIPO_SEGUN_PLANTILLA: Record<TipoPlantilla, TipoRespuesta> = {
   ecuacion_lineal: 'numerica',
   regla_de_tres: 'numerica',
@@ -424,6 +431,102 @@ export default function CrearExamenFinalPage() {
 
   function eliminarPregunta(index: number) {
     setPreguntas((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  // Convierte UNA pregunta del archivo importado a Pregunta. Solo preguntas
+  // fijas (no genera plantillas: cada pregunta del archivo ya es un
+  // ejercicio concreto, verificado del lado del motor). Devuelve el error
+  // en español si algo falta, para mostrarlo tal cual al docente.
+  function construirPreguntaImportada(cruda: any, indice: number, ordenBase: number): Pregunta | string {
+    const numero = indice + 1
+    const tipo: TipoPregunta = TIPOS_FIJOS_VALIDOS.includes(cruda?.tipo) ? cruda.tipo : 'opcion_multiple'
+
+    if (!cruda || typeof cruda.pregunta !== 'string' || !cruda.pregunta.trim()) {
+      return `pregunta ${numero}: falta el texto de la pregunta`
+    }
+
+    const respuesta = cruda.respuesta_correcta
+    if (respuesta === undefined || respuesta === null || respuesta.toString().trim() === '') {
+      return `pregunta ${numero}: falta la respuesta correcta`
+    }
+
+    let opciones: string[] = []
+
+    if (tipo === 'opcion_multiple') {
+      opciones = Array.isArray(cruda.opciones) ? cruda.opciones.map((o: any) => String(o)) : []
+      if (opciones.length < 2) {
+        return `pregunta ${numero}: necesita al menos 2 opciones`
+      }
+      const letraMaxima = String.fromCharCode(64 + opciones.length)
+      const letraRespuesta = String(respuesta).trim().toUpperCase()
+      if (!/^[A-Z]$/.test(letraRespuesta) || letraRespuesta > letraMaxima) {
+        return `pregunta ${numero}: la respuesta correcta debe ser una letra entre A y ${letraMaxima}`
+      }
+    } else if (tipo === 'verdadero_falso') {
+      opciones = ['Verdadero', 'Falso']
+      if (respuesta !== 'Verdadero' && respuesta !== 'Falso') {
+        return `pregunta ${numero}: la respuesta correcta debe ser "Verdadero" o "Falso"`
+      }
+    }
+
+    return {
+      tipo,
+      pregunta: cruda.pregunta,
+      opciones,
+      respuesta_correcta: String(respuesta).trim(),
+      tolerancia: typeof cruda.tolerancia === 'number' ? cruda.tolerancia : 0,
+      orden: ordenBase + numero,
+      es_plantilla: false,
+      tipo_plantilla: '',
+      parametros: {},
+    }
+  }
+
+  async function importarPreguntas(e: React.ChangeEvent<HTMLInputElement>) {
+    const archivo = e.target.files?.[0]
+    e.target.value = ''
+    if (!archivo) return
+
+    try {
+      const texto = await archivo.text()
+      const json = JSON.parse(texto)
+      const lista = Array.isArray(json) ? json : Array.isArray(json?.preguntas) ? json.preguntas : null
+
+      if (!lista) {
+        setError('El archivo debe ser una lista de preguntas en JSON, o un objeto { "preguntas": [...] }')
+        return
+      }
+      if (lista.length === 0) {
+        setError('El archivo no tiene preguntas')
+        return
+      }
+
+      const reemplazar = preguntas.length === 0
+        ? true
+        : confirm(
+            `El archivo trae ${lista.length} pregunta(s).\n\nAceptar = reemplazar las ${preguntas.length} pregunta(s) actuales.\nCancelar = agregarlas al final del banco actual.`
+          )
+
+      const ordenBase = reemplazar ? 0 : preguntas.length
+      const errores: string[] = []
+      const nuevas: Pregunta[] = []
+
+      lista.forEach((cruda: any, i: number) => {
+        const resultado = construirPreguntaImportada(cruda, i, ordenBase)
+        if (typeof resultado === 'string') errores.push(resultado)
+        else nuevas.push(resultado)
+      })
+
+      if (errores.length > 0) {
+        setError(`No se importó nada — revisa el archivo: ${errores.join('; ')}`)
+        return
+      }
+
+      setPreguntas((prev) => (reemplazar ? nuevas : [...prev, ...nuevas]))
+      setError('')
+    } catch (err) {
+      setError(`No se pudo leer el archivo: ${err instanceof Error ? err.message : 'formato inválido'}`)
+    }
   }
 
   async function guardarEvaluacion() {
@@ -875,6 +978,17 @@ export default function CrearExamenFinalPage() {
 
             </div>
           ))}
+        </div>
+
+        {/* IMPORTAR PREGUNTAS DESDE ARCHIVO */}
+        <div className="mb-4">
+          <label className="w-full border-2 border-dashed border-slate-700 rounded-2xl py-4 text-slate-400 hover:border-yellow-500/50 hover:text-yellow-500 transition-colors font-semibold cursor-pointer flex items-center justify-center">
+            Importar preguntas desde archivo (.json)
+            <input type="file" accept=".json,application/json" onChange={importarPreguntas} className="hidden" />
+          </label>
+          <p className="text-slate-500 text-xs mt-2">
+            Formato: JSON con una lista de preguntas — cada una con tipo, pregunta, opciones (si aplica) y respuesta_correcta. Puedes importar varias veces: te preguntamos si reemplazar el banco o agregar al final.
+          </p>
         </div>
 
         {/* AGREGAR PREGUNTA */}
