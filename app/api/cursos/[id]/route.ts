@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { createAdminSupabaseClient } from '@/lib/supabase-admin'
 
-const NIVELES = ['bachillerato', 'universitario', 'posgrado']
+const NIVELES = ['kids', 'bachillerato', 'universitario', 'posgrado']
 
 export async function PATCH(
   request: Request,

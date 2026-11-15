@@ -1,19 +1,20 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-// IP real del cliente. Next quitó request.ip (v15+); Vercel manda la IP en
-// x-forwarded-for (primer valor de la lista = cliente). En local (next dev)
-// no hay ningún proxy delante, no llega este header, y la función devuelve
-// null: el bloque de "una sola sesión por cuenta" se salta solo.
-function obtenerIp(request: NextRequest): string | null {
-  const xff = request.headers.get('x-forwarded-for')
-  if (xff) {
-    const primera = xff.split(',')[0]?.trim()
-    if (primera) return primera
-  }
-  const real = request.headers.get('x-real-ip')
-  return real?.trim() || null
-}
+// Cookie que identifica esta sesión (la escribe app/api/auth/ip-sesion).
+const COOKIE_SESION = 'exacta_sesion'
+
+// Rutas donde NO se aplica "una sola sesión por cuenta": son las que crean o
+// recuperan una sesión sin pasar por /login (confirmar correo, restablecer
+// contraseña) y el propio registro del identificador.
+const RUTAS_SIN_CONTROL_DE_SESION = [
+  '/login',
+  '/registro',
+  '/recuperar-password',
+  '/actualizar-password',
+  '/auth/',
+  '/api/auth/',
+]
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -85,25 +86,33 @@ export async function proxy(request: NextRequest) {
     const rol = perfil?.rol || 'alumno'
 
     // --- Una sola sesión activa por cuenta ---
-    // Al iniciar sesión en /login (ver app/(auth)/login/page.tsx) se guarda
-    // la IP en perfiles.ip_sesion. Si esta petición llega con sesión válida
-    // pero desde otra IP, esa sesión ya no es la más reciente: se cierra.
-    // Así, compartir usuario y contraseña obliga a los dos a estar
-    // reiniciando sesión todo el tiempo (quien entra de último "gana").
-    // Columna nueva: supabase/migraciones/2026-10-04_ip_sesion.sql. Si esa
+    // Al iniciar sesión en /login (ver app/(auth)/login/page.tsx) se genera
+    // un identificador al azar que queda en perfiles.sesion_id y en la cookie
+    // exacta_sesion de ese navegador. Si esta petición llega con sesión
+    // válida pero con otro identificador (o sin cookie), esa sesión ya no es
+    // la más reciente: se cierra. Así, compartir usuario y contraseña obliga
+    // a los dos a estar reiniciando sesión todo el tiempo (quien entra de
+    // último "gana"). A diferencia de la IP, el identificador no cambia
+    // cuando el alumno pasa de wifi a datos, y sí distingue a dos personas
+    // conectadas desde la misma red.
+    // Columna nueva: supabase/migraciones/2026-11-15_sesion_id.sql. Si esa
     // migración todavía no corrió en la base, la consulta de abajo falla y
     // el bloque se salta solo — nunca debe tocar el cálculo de "rol" de
     // arriba ni romper el enrutamiento por rol para nadie.
-    try {
-      const ipActual = obtenerIp(request)
-      if (ipActual) {
+    const ruta = request.nextUrl.pathname
+    const sinControl = RUTAS_SIN_CONTROL_DE_SESION.some((r) => ruta.startsWith(r))
+
+    if (!sinControl) {
+      try {
         const { data: sesion, error: sesionError } = await supabase
           .from('perfiles')
-          .select('ip_sesion')
+          .select('sesion_id')
           .eq('id', user.id)
           .single()
 
-        if (!sesionError && sesion?.ip_sesion && sesion.ip_sesion !== ipActual) {
+        const cookieSesion = request.cookies.get(COOKIE_SESION)?.value
+
+        if (!sesionError && sesion?.sesion_id && sesion.sesion_id !== cookieSesion) {
           await supabase.auth.signOut()
           const url = new URL('/login', request.url)
           url.searchParams.set('motivo', 'otra-conexion')
@@ -113,11 +122,12 @@ export async function proxy(request: NextRequest) {
           supabaseResponse.cookies.getAll().forEach((c) => {
             response.cookies.set(c.name, c.value, c)
           })
+          response.cookies.delete(COOKIE_SESION)
           return response
         }
+      } catch (err) {
+        console.error('Verificación de sesión única falló (se omite):', err)
       }
-    } catch (err) {
-      console.error('Verificación de IP de sesión falló (se omite):', err)
     }
 
     // Solo admin puede entrar a /admin

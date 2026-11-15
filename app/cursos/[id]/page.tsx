@@ -3,6 +3,7 @@ import LeccionPlayer from '@/components/curso/LeccionPlayer'
 import BotonComprar from '@/components/curso/BotonComprar'
 import { getCursoPorId } from '@/lib/db'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { esDocenteOAdminDelCurso } from '@/lib/acceso'
 
 export default async function CursoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -31,7 +32,9 @@ export default async function CursoPage({ params }: { params: Promise<{ id: stri
       .limit(1)
       .maybeSingle()
 
-    tieneElCurso = !!compra
+    // El docente dueño del curso y los admin lo ven como lo ve un alumno
+    // que ya lo compró, para poder revisarlo sin tener que comprarlo.
+    tieneElCurso = !!compra || await esDocenteOAdminDelCurso(supabase, user.id, id)
   }
 
   const { data: modulos } = await supabase

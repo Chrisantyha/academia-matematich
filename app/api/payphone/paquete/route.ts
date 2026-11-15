@@ -2,10 +2,11 @@ import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { createAdminSupabaseClient } from '@/lib/supabase-admin'
 import https from 'https'
+import { appUrl } from '@/lib/url'
+import { nuevoClientTransactionId } from '@/lib/payphone-aprobar'
 
 const PAYPHONE_TOKEN = process.env.PAYPHONE_TOKEN
 const PAYPHONE_STORE_ID = process.env.PAYPHONE_STORE_ID
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL_LOCAL
 
 function payphoneRequest(body: any): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -105,7 +106,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'El total calculado no es válido' }, { status: 400 })
     }
 
-    const clientTransactionId = `AMP${Math.floor(Date.now() / 1000)}`
+    const APP_URL = appUrl()
+    const clientTransactionId = nuevoClientTransactionId('AP')
     const montoEnCentavos = Math.round(total * 100)
     const paqueteId = crypto.randomUUID()
 
@@ -138,8 +140,11 @@ export async function POST(request: Request) {
 
     const cleanUrl = paymentUrl.replace(/"/g, '')
 
+    // Las filas de "compras" las escribe solo el servidor, con el cliente
+    // admin: el alumno no tiene permiso de insertar, modificar ni borrar
+    // compras desde el navegador.
     // Borrar compras pendientes anteriores de estos mismos cursos para este alumno
-    await supabase
+    await admin
       .from('compras')
       .delete()
       .eq('alumno_id', user.id)
@@ -157,7 +162,7 @@ export async function POST(request: Request) {
       paquete_id: paqueteId,
     }))
 
-    const { error: errorInsert } = await supabase.from('compras').insert(filas)
+    const { error: errorInsert } = await admin.from('compras').insert(filas)
 
     if (errorInsert) {
       console.error(errorInsert)

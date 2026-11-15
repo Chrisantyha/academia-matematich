@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { consultarPayphone } from '@/lib/payphone'
+import { aprobarCompraVerificada } from '@/lib/payphone-aprobar'
 
 export async function POST(request: Request) {
   try {
@@ -12,6 +12,10 @@ export async function POST(request: Request) {
     }
 
     const { cursoId, paqueteId } = await request.json()
+
+    if (!cursoId && !paqueteId) {
+      return NextResponse.json({ error: 'Faltan datos' }, { status: 400 })
+    }
 
     // Buscar la(s) compra(s) pendiente(s) del alumno: por paqueteId si viene,
     // si no por cursoId (comportamiento individual de siempre)
@@ -40,38 +44,23 @@ export async function POST(request: Request) {
     // Todas las filas de un mismo paquete comparten transaction_id; para
     // compra individual solo hay una fila. Basta consultar una vez.
     const transactionId = compras[0].payphone_transaction_id
-    console.log('Consultando transaccion:', transactionId)
 
-    // Consultar el estado en PayPhone
-    const resultado = await consultarPayphone(transactionId)
-    console.log('Respuesta PayPhone:', JSON.stringify(resultado))
+    // Verificación servidor a servidor con PayPhone (estado y monto) y
+    // aprobación con el cliente admin. Ver lib/payphone-aprobar.ts.
+    const resultado = await aprobarCompraVerificada(transactionId, user.id, user.email)
 
-    const estado = resultado.transactionStatus || resultado.status
-
-    if (estado !== 'Approved') {
-      return NextResponse.json({
-        ok: false,
-        error: 'El pago aun no ha sido aprobado',
-        estado: estado || 'Desconocido'
-      })
-    }
-
-    // Activar todas las compras asociadas a esta transaccion (1 si es
-    // individual, N si es paquete)
-    const idsAActivar = compras.map((c) => c.id)
-    const { error } = await supabase
-      .from('compras')
-      .update({ estado: 'aprobado' })
-      .in('id', idsAActivar)
-
-    if (error) {
-      console.error(error)
-      return NextResponse.json({ error: 'Error al activar el curso' }, { status: 500 })
+    if (!resultado.ok) {
+      return NextResponse.json(
+        { ok: false, error: resultado.error, estado: resultado.estado },
+        { status: resultado.status }
+      )
     }
 
     return NextResponse.json({
       ok: true,
-      mensaje: compras.length > 1 ? 'Pago confirmado. Acceso desbloqueado a todos los cursos del paquete.' : 'Pago confirmado. Acceso desbloqueado.'
+      mensaje: resultado.cursoIds.length > 1
+        ? 'Pago confirmado. Acceso desbloqueado a todos los cursos del paquete.'
+        : 'Pago confirmado. Acceso desbloqueado.'
     })
 
   } catch (error) {

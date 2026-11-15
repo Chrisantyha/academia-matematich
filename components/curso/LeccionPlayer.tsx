@@ -127,7 +127,7 @@ export default function LeccionPlayer({ lecciones, modulos, cursoId, progresoIni
       <div className="lg:col-span-2">
         {leccionActual.video_url ? (
           <VideoPlayer
-            videoId={leccionActual.video_url}
+            leccionId={leccionActual.id}
             titulo={leccionActual.titulo}
           />
         ) : (
@@ -153,7 +153,8 @@ export default function LeccionPlayer({ lecciones, modulos, cursoId, progresoIni
           <div>
             <h2 className="text-lg font-bold">{leccionActual.titulo}</h2>
             <p className="text-slate-400 text-sm mt-1">
-              Lección {leccionActual.orden} · {leccionActual.duracion_minutos} min
+              Lección {leccionActual.orden}
+              {leccionActual.duracion_minutos ? ` · ${leccionActual.duracion_minutos} min` : ''}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -297,7 +298,7 @@ export default function LeccionPlayer({ lecciones, modulos, cursoId, progresoIni
                           }`}>
                             {leccion.titulo}
                           </div>
-                          {leccion.duracion_minutos && (
+                          {!!leccion.duracion_minutos && (
                             <div className="text-xs text-slate-500">{leccion.duracion_minutos} min</div>
                           )}
                         </div>

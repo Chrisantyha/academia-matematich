@@ -37,7 +37,7 @@ if (error || !data.user) {
 try {
   await fetch('/api/auth/ip-sesion', { method: 'POST' })
 } catch (err) {
-  console.error('No se pudo registrar la IP de la sesión:', err)
+  console.error('No se pudo registrar la sesión:', err)
 }
 
 // Si este es el primer inicio de sesion del usuario (recien confirmo su
@@ -95,7 +95,7 @@ const { data: perfil } = await supabase
 
           {otraConexion && (
             <div className="bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 text-sm px-4 py-3 rounded-xl mb-5">
-              Esta cuenta inició sesión desde otra conexión, así que cerramos esta sesión. Si fuiste tú, vuelve a iniciar sesión.
+              Esta cuenta inició sesión en otro dispositivo o navegador, así que cerramos esta sesión. Si fuiste tú, vuelve a iniciar sesión.
             </div>
           )}
 

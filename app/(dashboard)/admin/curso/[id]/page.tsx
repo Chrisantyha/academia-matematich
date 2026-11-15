@@ -170,7 +170,7 @@ export default async function RevisarCursoAdmin({
                               )}
                             </div>
                             {leccion.video_url ? (
-                              <VideoPlayer videoId={leccion.video_url} />
+                              <VideoPlayer leccionId={leccion.id} />
                             ) : (
                               <p className="text-slate-600 text-xs">Sin video subido.</p>
                             )}

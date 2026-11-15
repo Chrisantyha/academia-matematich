@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     // Paso 2 (se llama despues de subir el archivo directo a Cloudflare desde
     // el navegador): guardar la leccion en la base de datos.
     if (body.action === 'guardar') {
-      const { videoId, titulo, cursoId, moduloId, orden, esGratis } = body
+      const { videoId, titulo, cursoId, moduloId, orden, esGratis, duracionMinutos } = body
 
       if (!videoId || !cursoId || !titulo) {
         return NextResponse.json({ error: 'Faltan datos' }, { status: 400 })
@@ -68,16 +68,30 @@ export async function POST(request: Request) {
         }
       }
 
-      const { error: dbError } = await supabase
+      const fila: Record<string, unknown> = {
+        curso_id: cursoId,
+        modulo_id: moduloId || null,
+        titulo,
+        video_url: videoId,
+        orden: orden || 1,
+        es_gratis: !!esGratis,
+      }
+
+      // Duración (la mide el navegador al elegir el archivo). Es un dato
+      // accesorio: si no llega, o si la base rechaza la columna, la lección
+      // se guarda igual sin duración.
+      const duracion = Math.round(Number(duracionMinutos))
+      const conDuracion = Number.isFinite(duracion) && duracion > 0
+
+      let { error: dbError } = await supabase
         .from('lecciones')
-        .insert({
-          curso_id: cursoId,
-          modulo_id: moduloId || null,
-          titulo,
-          video_url: videoId,
-          orden: orden || 1,
-          es_gratis: !!esGratis,
-        })
+        .insert(conDuracion ? { ...fila, duracion_minutos: duracion } : fila)
+
+      if (dbError && conDuracion) {
+        console.error('No se pudo guardar con duracion_minutos, se reintenta sin ella:', dbError)
+        const reintento = await supabase.from('lecciones').insert(fila)
+        dbError = reintento.error
+      }
 
       if (dbError) {
         console.error('DB Error:', dbError)
@@ -121,6 +135,10 @@ export async function POST(request: Request) {
     const metadata = [
       `name ${Buffer.from(titulo || 'video').toString('base64')}`,
       `maxdurationseconds ${Buffer.from('7200').toString('base64')}`,
+      // El video solo se reproduce con un token firmado y temporal, que
+      // entrega /api/lecciones/[id]/video a quien tiene acceso al curso. Sin
+      // esto, cualquiera con el id del video podía verlo y compartirlo.
+      'requiresignedurls',
     ].join(',')
 
     const response = await fetch(

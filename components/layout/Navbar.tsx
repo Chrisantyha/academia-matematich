@@ -15,6 +15,7 @@ export default function Navbar() {
   const [cargando, setCargando] = useState(true)
   const [rol, setRol] = useState<string | null>(null)
   const [menuAbierto, setMenuAbierto] = useState(false)
+  const [menuMovil, setMenuMovil] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
   const pathname = usePathname()
@@ -71,6 +72,7 @@ export default function Navbar() {
   // Cierra el dropdown al cambiar de ruta
   useEffect(() => {
     setMenuAbierto(false)
+    setMenuMovil(false)
   }, [pathname])
 
   const dashboardHref = rol === 'admin' ? '/admin' : rol === 'docente' ? '/docente' : '/alumno'
@@ -96,7 +98,8 @@ export default function Navbar() {
   const dropdownHover = 'hover:bg-slate-800'
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-10 py-4 backdrop-blur-md border-b ${fondoNav}`}>
+    <nav className={`fixed top-0 left-0 right-0 z-50 backdrop-blur-md border-b ${fondoNav}`}>
+      <div className="flex items-center justify-between px-4 md:px-10 py-4">
 
       {/* LOGO + INICIO */}
       <div className="flex items-center gap-5">
@@ -158,7 +161,7 @@ export default function Navbar() {
           </Link>
         ) : (
           <>
-            <Link href="/login" className={`text-sm font-semibold px-4 py-2 rounded-lg border transition-colors ${textoBoton}`}>
+            <Link href="/login" className={`hidden sm:inline-block text-sm font-semibold px-4 py-2 rounded-lg border transition-colors ${textoBoton}`}>
               Iniciar sesión
             </Link>
             <Link href="/registro" className={`text-sm font-semibold text-black px-4 py-2 rounded-lg transition-colors ${acentoBg}`}>
@@ -166,7 +169,49 @@ export default function Navbar() {
             </Link>
           </>
         )}
+
+        {/* BOTON MENU (solo celular) */}
+        <button
+          type="button"
+          onClick={() => setMenuMovil((v) => !v)}
+          aria-label={menuMovil ? 'Cerrar menú' : 'Abrir menú'}
+          aria-expanded={menuMovil}
+          className="md:hidden p-2 rounded-lg border border-slate-700 text-white hover:bg-slate-800 transition-colors"
+        >
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            {menuMovil ? (
+              <path d="M4 4L14 14M14 4L4 14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            ) : (
+              <path d="M2 5H16M2 9H16M2 13H16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            )}
+          </svg>
+        </button>
       </div>
+      </div>
+
+      {/* MENU DESPLEGABLE (solo celular) */}
+      {menuMovil && (
+        <div className="md:hidden border-t border-slate-800 px-4 py-3">
+          <Link href={cursosHref} className="block py-3 text-sm font-semibold text-white">
+            Cursos
+          </Link>
+          {bloques.map((b) => (
+            <Link
+              key={b.id}
+              href={b.href}
+              className={`flex flex-col py-3 border-t border-slate-800 ${b.id === bloque ? acento : 'text-white'}`}
+            >
+              <span className="text-sm font-semibold">{b.nombre}</span>
+              <span className="text-xs text-slate-400">{b.sub}</span>
+            </Link>
+          ))}
+          {!cargando && !rol && (
+            <Link href="/login" className="block py-3 border-t border-slate-800 text-sm font-semibold text-white sm:hidden">
+              Iniciar sesión
+            </Link>
+          )}
+        </div>
+      )}
 
     </nav>
   )

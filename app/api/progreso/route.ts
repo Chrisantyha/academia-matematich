@@ -28,7 +28,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Leccion no encontrada' }, { status: 404 })
     }
 
-    const autorizado = await tieneAccesoCurso(supabase, user.id, leccion.curso_id)
+    const autorizado = await tieneAccesoCurso(supabase, user.id, leccion.curso_id, {
+      permitirDocenteAdmin: true,
+    })
     if (!autorizado) {
       return NextResponse.json({ error: 'No tienes acceso a este curso' }, { status: 403 })
     }

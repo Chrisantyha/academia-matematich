@@ -1,4 +1,4 @@
-export function plantillaCertificado(nombreCurso: string, codigo: string) {
+export function plantillaCertificado(nombreCurso: string, codigo: string, certificadoId: string) {
   return {
     subject: `¡Certificado emitido! 🏆 ${nombreCurso}`,
     html: `
@@ -15,7 +15,7 @@ export function plantillaCertificado(nombreCurso: string, codigo: string) {
             Código de verificación: <strong style="color: #ffffff;">${codigo}</strong>
           </p>
           <div style="text-align: center; margin-top: 32px;">
-            <a href="${process.env.NEXT_PUBLIC_APP_URL}/certificados/${codigo}" style="background-color: #eab308; color: #000000; font-weight: bold; padding: 14px 32px; border-radius: 12px; text-decoration: none; display: inline-block;">
+            <a href="${process.env.NEXT_PUBLIC_APP_URL}/certificado/${certificadoId}" style="background-color: #eab308; color: #000000; font-weight: bold; padding: 14px 32px; border-radius: 12px; text-decoration: none; display: inline-block;">
               Ver mi certificado
             </a>
           </div>

@@ -15,7 +15,7 @@ export function plantillaCompra(nombreCurso: string, monto: number) {
             Monto pagado: <strong style="color: #ffffff;">$${monto.toFixed(2)}</strong>
           </p>
           <div style="text-align: center; margin-top: 32px;">
-            <a href="${process.env.NEXT_PUBLIC_APP_URL}/mis-cursos" style="background-color: #eab308; color: #000000; font-weight: bold; padding: 14px 32px; border-radius: 12px; text-decoration: none; display: inline-block;">
+            <a href="${process.env.NEXT_PUBLIC_APP_URL}/alumno/mis-cursos" style="background-color: #eab308; color: #000000; font-weight: bold; padding: 14px 32px; border-radius: 12px; text-decoration: none; display: inline-block;">
               Ir a mi curso
             </a>
           </div>

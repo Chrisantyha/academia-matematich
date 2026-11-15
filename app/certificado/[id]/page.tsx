@@ -3,6 +3,7 @@ import { createAdminSupabaseClient } from '@/lib/supabase-admin'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import BotonImprimir from '@/components/ui/BotonImprimir'
 import QRCertificado from '@/components/ui/QRCertificado'
+import { appUrl } from '@/lib/url'
 
 export default async function CertificadoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -39,7 +40,7 @@ export default async function CertificadoPage({ params }: { params: Promise<{ id
     day: 'numeric',
   })
 
-  const urlCertificado = `https://academia-matematich.vercel.app/certificado/${id}`
+  const urlCertificado = `${appUrl()}/certificado/${id}`
 
   return (
     <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-8">

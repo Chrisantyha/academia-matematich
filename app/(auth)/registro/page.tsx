@@ -11,6 +11,7 @@ export default function RegistroPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [correoEnviado, setCorreoEnviado] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -25,7 +26,7 @@ export default function RegistroPage() {
       return
     }
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -40,8 +41,50 @@ export default function RegistroPage() {
       return
     }
 
-    router.push('/login')
+    // Si el proyecto no exige confirmar el correo, signUp ya devuelve una
+    // sesión iniciada: se entra directo al panel.
+    if (data.session) {
+      router.push('/alumno')
+      router.refresh()
+      return
+    }
 
+    // Si exige confirmación, todavía no hay sesión: se le avisa que revise
+    // su correo (antes se lo mandaba a /login sin explicación y el inicio
+    // de sesión fallaba hasta que confirmara).
+    setCorreoEnviado(true)
+    setLoading(false)
+  }
+
+  if (correoEnviado) {
+    return (
+      <main className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <Link href="/" className="text-2xl font-bold text-white">
+              Exacta<span className="text-yellow-500">Lab</span>
+            </Link>
+          </div>
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center">
+            <div className="text-5xl mb-4">📬</div>
+            <h1 className="text-xl font-bold text-white mb-3">Revisa tu correo</h1>
+            <p className="text-slate-400 text-sm leading-relaxed mb-2">
+              Te enviamos un enlace de confirmación a
+            </p>
+            <p className="text-yellow-500 font-semibold text-sm mb-4 break-all">{email}</p>
+            <p className="text-slate-400 text-sm leading-relaxed mb-6">
+              Ábrelo para activar tu cuenta y luego inicia sesión. Si no lo ves en unos minutos, revisa la carpeta de spam.
+            </p>
+            <Link
+              href="/login"
+              className="inline-block w-full bg-yellow-500 text-black font-bold py-3 rounded-xl hover:bg-yellow-400 transition-colors"
+            >
+              Ir a iniciar sesión
+            </Link>
+          </div>
+        </div>
+      </main>
+    )
   }
 
   return (

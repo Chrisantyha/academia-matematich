@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase'
 import VideoUpload from '@/components/curso/VideoUpload'
 import { useParams } from 'next/navigation'
 
-const NIVELES = ['bachillerato', 'universitario', 'posgrado']
+const NIVELES = ['kids', 'bachillerato', 'universitario', 'posgrado']
 
 interface Modulo {
   id: string

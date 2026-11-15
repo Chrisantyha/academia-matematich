@@ -24,6 +24,32 @@ export default function VideoUpload({ cursoId, moduloId, orden, onSuccess }: Vid
     if (file) setArchivo(file)
   }
 
+  // Duración del video en minutos (redondeada hacia arriba, mínimo 1), leída
+  // de los metadatos del archivo en el navegador. Si no se puede leer
+  // devuelve null y la lección se guarda sin duración.
+  function medirDuracionMinutos(video: File): Promise<number | null> {
+    return new Promise((resolve) => {
+      const url = URL.createObjectURL(video)
+      const elemento = document.createElement('video')
+      const terminar = (valor: number | null) => {
+        URL.revokeObjectURL(url)
+        resolve(valor)
+      }
+      const limite = setTimeout(() => terminar(null), 8000)
+      elemento.preload = 'metadata'
+      elemento.onloadedmetadata = () => {
+        clearTimeout(limite)
+        const segundos = elemento.duration
+        terminar(Number.isFinite(segundos) && segundos > 0 ? Math.max(1, Math.ceil(segundos / 60)) : null)
+      }
+      elemento.onerror = () => {
+        clearTimeout(limite)
+        terminar(null)
+      }
+      elemento.src = url
+    })
+  }
+
   function subirACloudflare(uploadURL: string, video: File): Promise<void> {
     return new Promise((resolve, reject) => {
       // uploadURL ya es un endpoint TUS creado por Cloudflare (/stream/direct_upload):
@@ -121,13 +147,15 @@ export default function VideoUpload({ cursoId, moduloId, orden, onSuccess }: Vid
     setProgreso(5)
 
     try {
+      const duracionMinutos = await medirDuracionMinutos(archivo)
+
       // Paso 1: pedir a nuestro backend una URL de subida directa a Cloudflare Stream
       // (el tamano es obligatorio: Cloudflare lo necesita como Upload-Length
       // al crear el upload TUS, antes de que se suba ningun byte)
       const creacion = await fetch('/api/upload-video', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ titulo, tamano: archivo.size }),
+        body: JSON.stringify({ titulo, tamano: archivo.size, cursoId }),
       })
 
       const datosCreacion = await creacion.json()
@@ -158,6 +186,7 @@ export default function VideoUpload({ cursoId, moduloId, orden, onSuccess }: Vid
           moduloId: moduloId || '',
           orden: orden || 1,
           esGratis,
+          duracionMinutos,
         }),
       })
 

@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createAdminSupabaseClient } from '@/lib/supabase-admin'
 import https from 'https'
+import { appUrl } from '@/lib/url'
+import { nuevoClientTransactionId } from '@/lib/payphone-aprobar'
 
 const PAYPHONE_TOKEN = process.env.PAYPHONE_TOKEN
 const PAYPHONE_STORE_ID = process.env.PAYPHONE_STORE_ID
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL_LOCAL
 
 function payphoneRequest(body: any): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -77,7 +79,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Ya tienes este curso' }, { status: 400 })
     }
 
-    const clientTransactionId = `AM${Math.floor(Date.now() / 1000)}`
+    const APP_URL = appUrl()
+    const clientTransactionId = nuevoClientTransactionId('AM')
     const montoEnCentavos = Math.round(precio * 100)
 
     const body = {
@@ -109,8 +112,14 @@ export async function POST(request: Request) {
 
     const cleanUrl = paymentUrl.replace(/"/g, '')
 
+    // Las filas de "compras" las escribe solo el servidor, con el cliente
+    // admin: el alumno no tiene (ni debe tener) permiso de insertar,
+    // modificar o borrar compras desde el navegador. alumno_id sale siempre
+    // de la sesión verificada arriba, nunca de lo que mande el cliente.
+    const admin = createAdminSupabaseClient()
+
     // Borrar compras pendientes anteriores de este curso
-    await supabase
+    await admin
       .from('compras')
       .delete()
       .eq('alumno_id', user.id)
@@ -118,13 +127,20 @@ export async function POST(request: Request) {
       .eq('estado', 'pendiente')
 
     // Guardar nueva compra pendiente
-    await supabase.from('compras').insert({
+    const { error: errorInsert } = await admin.from('compras').insert({
       alumno_id: user.id,
       curso_id: cursoId,
       monto: precio,
       estado: 'pendiente',
       payphone_transaction_id: clientTransactionId,
     })
+
+    // Sin esta fila no hay forma de reconocer el pago después (ni el sondeo
+    // ni el webhook la encontrarían), así que no se le entrega el link.
+    if (errorInsert) {
+      console.error('Error al registrar la compra pendiente:', errorInsert)
+      return NextResponse.json({ error: 'Error al registrar la compra' }, { status: 500 })
+    }
 
     return NextResponse.json({
       ok: true,
