@@ -46,6 +46,8 @@ export default async function MisCursosPage() {
 
       return {
         compraId: compra.id,
+        monto: Number(compra.monto) || 0,
+        fecha: compra.created_at as string,
         cursoId: compra.curso_id,
         titulo: compra.cursos?.titulo || 'Curso',
         categoria: compra.cursos?.categoria,
@@ -165,6 +167,30 @@ export default async function MisCursosPage() {
                     </div>
                   </div>
                 </Link>
+              ))}
+            </div>
+          )}
+
+          {cursosConProgreso.length > 0 && (
+            <div className="mt-10 bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-800">
+                <h2 className="text-base font-bold">Mis compras</h2>
+                <p className="text-slate-500 text-xs mt-1">Abre el comprobante para imprimirlo o guardarlo como PDF.</p>
+              </div>
+              {cursosConProgreso.map((c) => (
+                <div key={c.compraId} className="flex items-center gap-4 px-6 py-3 border-b border-slate-800 last:border-0 text-sm flex-wrap">
+                  <span className="flex-1 min-w-[12rem] font-semibold">{c.titulo}</span>
+                  <span className="text-slate-500 text-xs">
+                    {new Date(c.fecha).toLocaleDateString('es-EC', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'America/Guayaquil' })}
+                  </span>
+                  <span className="font-mono">${c.monto.toFixed(2)}</span>
+                  <Link
+                    href={`/alumno/comprobante/${c.compraId}`}
+                    className="text-yellow-500 text-xs font-semibold hover:text-yellow-400 transition-colors"
+                  >
+                    🧾 Comprobante
+                  </Link>
+                </div>
               ))}
             </div>
           )}

@@ -4,6 +4,57 @@ import BotonComprar from '@/components/curso/BotonComprar'
 import { getCursoPorId } from '@/lib/db'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { esDocenteOAdminDelCurso } from '@/lib/acceso'
+import { createAdminSupabaseClient } from '@/lib/supabase-admin'
+import type { Metadata } from 'next'
+
+// Título, descripción e imagen propios de cada curso, para buscadores y para
+// la vista previa al compartir el enlace (WhatsApp, Facebook, etc.). Solo se
+// exponen los cursos publicados; el resto queda fuera de los buscadores.
+export async function generateMetadata(
+  { params }: { params: Promise<{ id: string }> }
+): Promise<Metadata> {
+  const { id } = await params
+
+  try {
+    const admin = createAdminSupabaseClient()
+    const { data: curso } = await admin
+      .from('cursos')
+      .select('titulo, descripcion, imagen_url, estado')
+      .eq('id', id)
+      .maybeSingle()
+
+    if (!curso || curso.estado !== 'publicado') {
+      return { title: 'Curso', robots: { index: false, follow: false } }
+    }
+
+    const descripcion = (curso.descripcion || '').replace(/\s+/g, ' ').trim().slice(0, 160)
+    const imagenes = curso.imagen_url ? [{ url: curso.imagen_url as string }] : undefined
+
+    return {
+      title: curso.titulo,
+      description: descripcion || undefined,
+      alternates: { canonical: `/cursos/${id}` },
+      openGraph: {
+        type: 'website',
+        siteName: 'ExactaLab',
+        locale: 'es_EC',
+        url: `/cursos/${id}`,
+        title: curso.titulo,
+        description: descripcion || undefined,
+        images: imagenes,
+      },
+      twitter: {
+        card: imagenes ? 'summary_large_image' : 'summary',
+        title: curso.titulo,
+        description: descripcion || undefined,
+        images: curso.imagen_url ? [curso.imagen_url as string] : undefined,
+      },
+    }
+  } catch (err) {
+    console.error('generateMetadata (curso): error', err)
+    return { title: 'Curso' }
+  }
+}
 
 export default async function CursoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params

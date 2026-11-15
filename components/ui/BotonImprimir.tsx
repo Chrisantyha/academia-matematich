@@ -1,12 +1,12 @@
 'use client'
 
-export default function BotonImprimir() {
+export default function BotonImprimir({ texto = '🖨️ Imprimir certificado' }: { texto?: string }) {
   return (
     <button
       onClick={() => window.print()}
-      className="bg-yellow-500 text-black font-bold px-8 py-3 rounded-xl hover:bg-yellow-400 transition-colors"
+      className="bg-yellow-500 text-black font-bold px-8 py-3 rounded-xl hover:bg-yellow-400 transition-colors print:hidden"
     >
-      🖨️ Imprimir certificado
+      {texto}
     </button>
   )
 }

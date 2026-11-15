@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import LogoutButton from '@/components/auth/LogoutButton'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createAdminSupabaseClient } from '@/lib/supabase-admin'
 import { getPerfil } from '@/lib/db'
 
 export default async function DocenteDashboard() {
@@ -35,6 +36,12 @@ export default async function DocenteDashboard() {
     .slice(0, 2)
     .toUpperCase()
 
+  // Las compras se leen con el cliente admin porque la política RLS de
+  // "compras" solo deja ver a cada usuario las suyas. Es seguro: "cursos" ya
+  // viene filtrado arriba por docente_id = este usuario, así que solo se
+  // consultan ventas de sus propios cursos.
+  const admin = createAdminSupabaseClient()
+
   const cursosConDatos = await Promise.all(
     (cursos || []).map(async (curso: any) => {
       const totalLecciones = (curso.modulos || []).reduce(
@@ -42,14 +49,14 @@ export default async function DocenteDashboard() {
         0
       )
 
-      const { data: compras } = await supabase
+      const { data: compras } = await admin
         .from('compras')
         .select('monto')
         .eq('curso_id', curso.id)
         .eq('estado', 'aprobado')
 
       const alumnos = compras?.length || 0
-      const ingresos = (compras || []).reduce((acc: number, c: any) => acc + (c.monto || 0), 0)
+      const ingresos = (compras || []).reduce((acc: number, c: any) => acc + (Number(c.monto) || 0), 0)
 
       return {
         id: curso.id,

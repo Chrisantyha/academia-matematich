@@ -5,6 +5,7 @@ import AutoRefresh from '@/components/admin/AutoRefresh'
 import BotonConfirmar from '@/components/admin/BotonConfirmar'
 import { alternarPublicacionCurso } from '@/lib/actions/admin-curso'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createAdminSupabaseClient } from '@/lib/supabase-admin'
 import { getPerfil } from '@/lib/db'
 
 export default async function AdminDashboard() {
@@ -23,6 +24,11 @@ export default async function AdminDashboard() {
 
   const nombre = perfil?.nombre || user.email?.split('@')[0] || 'Administrador'
 
+  // El rol admin ya se verificó arriba. Las compras se leen con el cliente
+  // admin porque la política RLS de "compras" solo deja ver a cada usuario
+  // las suyas: con el cliente normal los ingresos salían en cero.
+  const admin = createAdminSupabaseClient()
+
   const [
     { data: cursos },
     { count: totalAlumnos },
@@ -38,14 +44,14 @@ export default async function AdminDashboard() {
       `)
       .order('created_at', { ascending: false }),
     supabase.from('perfiles').select('id', { count: 'exact', head: true }).eq('rol', 'alumno'),
-    supabase.from('compras').select('monto, curso_id, created_at').eq('estado', 'aprobado'),
+    admin.from('compras').select('monto, curso_id, created_at').eq('estado', 'aprobado'),
   ])
 
   const comprasPorCurso = new Map<string, { alumnos: number; ingresos: number }>()
   for (const compra of comprasAprobadas || []) {
     const actual = comprasPorCurso.get(compra.curso_id) || { alumnos: 0, ingresos: 0 }
     actual.alumnos += 1
-    actual.ingresos += compra.monto || 0
+    actual.ingresos += Number(compra.monto) || 0
     comprasPorCurso.set(compra.curso_id, actual)
   }
 
@@ -79,14 +85,14 @@ export default async function AdminDashboard() {
 
   const cursosPublicados = cursosConDatos.filter((c) => c.estado === 'publicado').length
   const cursosEnRevision = cursosConDatos.filter((c) => c.estado === 'en_revision').length
-  const ingresosTotales = (comprasAprobadas || []).reduce((acc, c) => acc + (c.monto || 0), 0)
+  const ingresosTotales = (comprasAprobadas || []).reduce((acc, c) => acc + (Number(c.monto) || 0), 0)
 
   const inicioMes = new Date()
   inicioMes.setDate(1)
   inicioMes.setHours(0, 0, 0, 0)
   const ingresosDelMes = (comprasAprobadas || [])
     .filter((c) => new Date(c.created_at) >= inicioMes)
-    .reduce((acc, c) => acc + (c.monto || 0), 0)
+    .reduce((acc, c) => acc + (Number(c.monto) || 0), 0)
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
@@ -113,6 +119,12 @@ export default async function AdminDashboard() {
             className="flex items-center gap-3 px-3 py-2 rounded-lg bg-yellow-500/10 text-yellow-500 font-medium text-sm border-l-2 border-yellow-500"
           >
             <span>📊</span> Dashboard Global
+          </Link>
+          <Link
+            href="/admin/ventas"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800/50 font-medium text-sm transition-colors"
+          >
+            <span>💵</span> Ventas
           </Link>
           <Link
             href="/admin/usuarios"
